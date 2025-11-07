@@ -1,0 +1,67 @@
+version: '3.9'
+
+services:
+  # PostgreSQL база данных
+  db:
+    image: postgres:15-alpine
+    container_name: sigmacards-db
+    environment:
+      POSTGRES_USER: sigmacards
+      POSTGRES_PASSWORD: sigmacards_password_123
+      POSTGRES_DB: sigmacards_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sigmacards"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sigmacards-network
+
+  # FastAPI приложение (ОСНОВНОЙ БЭКЕНД - БЕЗ ML)
+  api:
+    build: .
+    container_name: sigmacards-api
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      DATABASE_URL: postgresql://sigmacards:sigmacards_password_123@db:5432/sigmacards_db
+      ENV: development
+      SECRET_KEY: your-super-secret-key-change-this-in-production-12345
+      ML_SERVICE_URL: http://ml-service:8001
+      ML_SERVICE_TIMEOUT: 60
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - sigmacards-network
+
+  # ==========================================
+  # ML MICROSERVICE (ОТДЕЛЬНО - ML команда)
+  # ==========================================
+  # ml-service:
+  #   build: ../ml-service  # Путь к ML репозиторию
+  #   container_name: sigmacards-ml
+  #   command: python main.py
+  #   ports:
+  #     - "8001:8001"
+  #   environment:
+  #     - YANDEX_VISION_API_KEY=your_key
+  #     - DEEPSEEK_API_KEY=your_key
+  #   networks:
+  #     - sigmacards-network
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  sigmacards-network:
+    driver: bridge
