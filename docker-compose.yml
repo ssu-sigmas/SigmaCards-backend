@@ -7,14 +7,17 @@ services:
     container_name: sigmacards-db
     environment:
       POSTGRES_USER: sigmacards
-      POSTGRES_PASSWORD: sigmacards_password_123
+      POSTGRES_PASSWORD: megapasswprd
       POSTGRES_DB: sigmacards_db
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      PYTHONENCODING: utf-8
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sigmacards"]
+      test: ["CMD-SHELL", "pg_isready -U sigmacards -d sigmacards_db"]
       interval: 10s
       timeout: 5s
       retries: 5
