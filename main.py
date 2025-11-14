@@ -1,11 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import os
-from dotenv import load_dotenv
 import httpx
 
-# Загрузить переменные окружения
-load_dotenv()
+from src.core.config import settings
+from src.api import auth
+
 
 # Создать FastAPI приложение
 app = FastAPI(
@@ -16,9 +15,11 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
+
 # ==========================================
 # MIDDLEWARE
 # ==========================================
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,27 +29,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # ==========================================
 # ML SERVICE CLIENT
 # ==========================================
 
-ML_SERVICE_URL = os.getenv("ML_SERVICE_URL", "http://localhost:8001")
-ML_SERVICE_TIMEOUT = int(os.getenv("ML_SERVICE_TIMEOUT", "60"))
 
 async def call_ml_service(endpoint: str, data: dict):
     """Вызвать ML микросервис"""
-    url = f"{ML_SERVICE_URL}{endpoint}"
+    url = f"{settings.ML_SERVICE_URL}{endpoint}"
     try:
-        async with httpx.AsyncClient(timeout=ML_SERVICE_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=settings.ML_SERVICE_TIMEOUT) as client:
             response = await client.post(url, json=data)
             response.raise_for_status()
             return response.json()
     except httpx.HTTPError as e:
         return {"error": str(e), "status": "ml_service_error"}
 
+
 # ==========================================
 # ROUTES
 # ==========================================
+
 
 @app.get("/")
 async def root():
@@ -59,15 +61,17 @@ async def root():
         "docs_url": "/docs"
     }
 
+
 @app.get("/health")
 async def health_check():
     """Проверка здоровья сервиса"""
     return {
         "status": "ok",
         "service": "sigmacards-api",
-        "environment": os.getenv("ENV", "unknown"),
-        "ml_service": ML_SERVICE_URL
+        "environment": settings.ENV,
+        "ml_service": settings.ML_SERVICE_URL
     }
+
 
 @app.post("/api/upload-image")
 async def upload_image(file: bytes, deck_id: str):
@@ -85,13 +89,20 @@ async def upload_image(file: bytes, deck_id: str):
     )
     return result
 
+
+# ==========================================
+# API ROUTERS
+# ==========================================
+
+app.include_router(auth.router)
+
 # ==========================================
 # TODO: Добавить роуты
 # ==========================================
-# - /auth/* - авторизация (login, register, refresh)
 # - /decks/* - колоды (create, get, delete, update)
 # - /cards/* - карточки (create, get, delete, update)
 # - /review/* - обучение (submit review, get due cards)
+
 
 if __name__ == "__main__":
     import uvicorn
@@ -99,6 +110,5 @@ if __name__ == "__main__":
         app,
         host="0.0.0.0",
         port=8000,
-        reload=True,
-        env_file=".env"
+        reload=True
     )
