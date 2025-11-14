@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import httpx
 
 from src.core.config import settings
-from src.api import auth
+from src.api import auth, users
 
 
 # Создать FastAPI приложение
@@ -73,28 +73,12 @@ async def health_check():
     }
 
 
-@app.post("/api/upload-image")
-async def upload_image(file: bytes, deck_id: str):
-    """
-    Загрузить изображение для OCR.
-    Отправляет на ML микросервис, который вернет текст и сгенерирует карточки.
-    """
-    # Отправить на ML сервис
-    result = await call_ml_service(
-        "/process-image",
-        {
-            "image": file.hex(),  # Конвертируем в hex для JSON
-            "deck_id": deck_id
-        }
-    )
-    return result
-
-
 # ==========================================
 # API ROUTERS
 # ==========================================
 
 app.include_router(auth.router)
+app.include_router(users.router)
 
 # ==========================================
 # TODO: Добавить роуты
