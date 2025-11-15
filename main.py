@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import httpx
 
 from src.core.config import settings
-from src.api import auth, users
+from src.api import auth, users, decks
 
 
 # Создать FastAPI приложение
@@ -79,6 +79,7 @@ async def health_check():
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(decks.router)
 
 # ==========================================
 # TODO: Добавить роуты
