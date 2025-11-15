@@ -37,7 +37,7 @@
 
 1. **Клонируйте репозиторий:**
    ```bash
-   git clone https://github.com/ваш-юзернейм/sigmacards-backend.git
+   git clone https://github.com/ssu-sigmas/SigmaCards-backend.git
    cd sigmacards-backend
    ```
 
