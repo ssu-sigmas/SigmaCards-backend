@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import httpx
 
 from src.core.config import settings
-from src.api import auth, users, decks, cards
+from src.api import auth, users, decks, cards, review
 
 
 # Создать FastAPI приложение
@@ -81,14 +81,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(decks.router)
 app.include_router(cards.router)
-
-# ==========================================
-# TODO: Добавить роуты
-# ==========================================
-# - /decks/* - колоды (create, get, delete, update)
-# - /cards/* - карточки (create, get, delete, update)
-# - /review/* - обучение (submit review, get due cards)
-
+app.include_router(review.router)
 
 if __name__ == "__main__":
     import uvicorn

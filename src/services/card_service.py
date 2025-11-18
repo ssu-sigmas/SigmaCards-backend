@@ -1,6 +1,8 @@
+# src/services/card_service.py
 from sqlalchemy.orm import Session
 from uuid import uuid4, UUID
-from src.models import Flashcard, User, Deck
+from datetime import datetime, timedelta
+from src.models import Flashcard, User, Deck, UserCard
 from src.schemas.card import FlashcardCreate, FlashcardUpdate, FlashcardResponse
 from typing import List
 
@@ -18,18 +20,36 @@ class CardService:
         card = Flashcard(
             id=uuid4(),
             deck_id=deck_id,
-            source_id=card_data.source_id,  # Пока None
-            card_type="basic",  # Пока базовые
+            source_id=None,
+            card_type="basic",
             content=card_data.content,
             position=card_data.position
         )
         db.add(card)
+        db.flush()
+        
+        # Создаём UserCard для FSRS - связь пользователя с карточкой
+        user_card = UserCard(
+            id=uuid4(),
+            user_id=current_user.id,
+            card_id=card.id,
+            due=datetime.utcnow(), # FSRS вообще предполагает +1 день, но как по мне странно
+            state=0,  # NEW
+            stability=0.0,
+            difficulty=0.0,
+            elapsed_days=0,
+            scheduled_days=0,
+            reps=0,
+            lapses=0
+        )
+        db.add(user_card)
         db.commit()
         db.refresh(card)
+        
         return card
     
     @staticmethod
-    def get_deck_cards(db: Session, deck_id: UUID, current_user: User, skip: int = 0, limit: int = 100) -> List[Flashcard]:
+    def get_deck_cards(db: Session, deck_id: UUID, current_user: User, skip: int = 0, limit: int = 100) -> list:
         deck = db.query(Deck).filter(
             Deck.id == deck_id,
             Deck.user_id == current_user.id
