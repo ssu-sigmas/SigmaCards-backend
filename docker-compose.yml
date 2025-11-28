@@ -5,13 +5,8 @@ services:
   db:
     image: postgres:15-alpine
     container_name: sigmacards-db
-    environment:
-      POSTGRES_USER: sigmacards
-      POSTGRES_PASSWORD: megapasswprd
-      POSTGRES_DB: sigmacards_db
-      LANG: C.UTF-8
-      LC_ALL: C.UTF-8
-      PYTHONENCODING: utf-8
+    env_file:
+      - .env.db
     ports:
       - "5432:5432"
     volumes:
@@ -28,39 +23,19 @@ services:
   api:
     build: .
     container_name: sigmacards-api
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn main:app --host 0.0.0.0 --port 8010 --reload
     ports:
-      - "8000:8000"
+      - "8010:8010"
     volumes:
       - .:/app
-    environment:
-      DATABASE_URL: postgresql://sigmacards:sigmacards_password_123@db:5432/sigmacards_db
-      ENV: development
-      SECRET_KEY: your-super-secret-key-change-this-in-production-12345
-      ML_SERVICE_URL: http://ml-service:8001
-      ML_SERVICE_TIMEOUT: 60
+    env_file:
+      - .env
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
     networks:
       - sigmacards-network
-
-  # ==========================================
-  # ML MICROSERVICE (ОТДЕЛЬНО - ML команда)
-  # ==========================================
-  # ml-service:
-  #   build: ../ml-service  # Путь к ML репозиторию
-  #   container_name: sigmacards-ml
-  #   command: python main.py
-  #   ports:
-  #     - "8001:8001"
-  #   environment:
-  #     - YANDEX_VISION_API_KEY=your_key
-  #     - DEEPSEEK_API_KEY=your_key
-  #   networks:
-  #     - sigmacards-network
-  #   restart: unless-stopped
 
 volumes:
   postgres_data:

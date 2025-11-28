@@ -8,6 +8,9 @@ from src.services.card_service import CardService
 from src.core.dependencies import get_current_user
 from src.db.database import get_db
 from src.models import User
+from src.services.ml_service import MLService
+from src.schemas.card import GenerateCardsRequest, MLGeneratedCard
+from src.services.ml_service import ml_service
 
 router = APIRouter(prefix="/cards", tags=["cards"])
 
@@ -78,3 +81,15 @@ def delete_card(
         CardService.delete_card(db, card_id, current_user)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+@router.post("/generate", response_model=List[MLGeneratedCard])
+async def generate_cards_ml(
+    request: GenerateCardsRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Генерирует карточки разных типов через ML-сервис (прослойка)
+    НЕ сохраняет в БД - только возвращает для фронта
+    """
+    cards = await ml_service.generate_cards(request.text, request.count)
+    return cards

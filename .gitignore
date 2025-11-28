@@ -17,6 +17,7 @@ pip-delete-this-directory.txt
 # Environment variables (НЕ коммитим реальные пароли!)
 # ==========================================
 .env
+.env.db
 .env.local
 .env.*.local
 

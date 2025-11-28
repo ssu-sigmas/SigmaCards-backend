@@ -20,7 +20,7 @@ class CardService:
         card = Flashcard(
             id=uuid4(),
             deck_id=deck_id,
-            source_id=None,
+            source_id=card_data.card_type,
             card_type="basic",
             content=card_data.content,
             position=card_data.position
