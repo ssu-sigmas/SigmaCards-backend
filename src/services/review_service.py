@@ -1,7 +1,7 @@
 # src/services/review_service.py
 from datetime import datetime, timezone
 from typing import List, Dict, Any
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from src.models import UserCard, ReviewLog, User, Flashcard
 from src.schemas.review import ReviewRequest, ReviewResponse, DueCardResponse
 from uuid import UUID
@@ -17,23 +17,22 @@ class ReviewService:
         """Получить карточки на повтор СЕГОДНЯ"""
         now = datetime.now(timezone.utc)
         
-        query = db.query(UserCard).filter(
+        query = db.query(UserCard).options(joinedload(UserCard.card)).filter(
             UserCard.user_id == current_user.id,
             UserCard.due <= now
         )
         
         if deck_id:
-            query = query.join(Flashcard).filter(Flashcard.deck_id == deck_id)
+            query = query.filter(UserCard.card.has(Flashcard.deck_id == deck_id))
         
         cards = query.order_by(UserCard.due).limit(limit).all()
         
         response = []
         for uc in cards:
-            card = db.query(Flashcard).filter(Flashcard.id == uc.card_id).first()
             response.append({
                 "user_card_id": uc.id,
                 "card_id": uc.card_id,
-                "content": card.content,
+                "content": uc.card.content,
                 "state": uc.state,
                 "stability": float(uc.stability),
                 "difficulty": float(uc.difficulty),
