@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from uuid import uuid4, UUID
-from src.models import Deck, User
+from src.models import Deck, User, Flashcard
 from src.schemas.deck import DeckCreate, DeckUpdate, DeckResponse
 
 class DeckService:
@@ -68,4 +68,19 @@ class DeckService:
     @staticmethod
     def get_deck_count(deck: Deck, db: Session) -> int:
         """Подсчёт карточек в колоде"""
-        return db.query(func.count(Deck.flashcards)).filter(Deck.id == deck.id).scalar()
+        return db.query(func.count(Flashcard.id)).filter(Flashcard.deck_id == deck.id).scalar() or 0
+
+    @staticmethod
+    def get_deck_counts(db: Session, deck_ids: list[UUID]) -> dict[UUID, int]:
+        """Подсчёт карточек для списка колод"""
+        if not deck_ids:
+            return {}
+
+        rows = (
+            db.query(Flashcard.deck_id, func.count(Flashcard.id))
+            .filter(Flashcard.deck_id.in_(deck_ids))
+            .group_by(Flashcard.deck_id)
+            .all()
+        )
+
+        return {deck_id: count for deck_id, count in rows}

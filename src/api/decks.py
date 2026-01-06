@@ -34,9 +34,15 @@ def get_user_decks(
 ):
     """Получить список колод пользователя"""
     decks = DeckService.get_user_decks(db, current_user, skip, limit)
-    return [
-        DeckResponse.from_orm(deck) for deck in decks
-    ]
+    deck_counts = DeckService.get_deck_counts(db, [deck.id for deck in decks])
+
+    deck_responses: list[DeckResponse] = []
+    for deck in decks:
+        deck_response = DeckResponse.from_orm(deck)
+        deck_response.flashcards_count = deck_counts.get(deck.id, 0)
+        deck_responses.append(deck_response)
+
+    return deck_responses
 
 @router.get("/{deck_id}", response_model=DeckResponse)
 def get_deck(

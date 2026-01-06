@@ -16,6 +16,7 @@ class FlashcardCreate(BaseModel):
     content: Dict[str, Any] = Field(..., description="JSON с front/back/image/media")
     position: Optional[int] = Field(0, ge=0)
     card_type: CardType = Field(CardType.KEY_TERMS, description="Тип карточки")
+    source_id: Optional[UUID] = Field(None, description="ID источника карточки (опционально)")
 
 class FlashcardUpdate(BaseModel):
     content: Optional[Dict[str, Any]] = Field(None)

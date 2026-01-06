@@ -1,10 +1,10 @@
 # src/services/card_service.py
 from sqlalchemy.orm import Session
 from uuid import uuid4, UUID
-from datetime import datetime, timedelta
-from src.models import Flashcard, User, Deck, UserCard
-from src.schemas.card import FlashcardCreate, FlashcardUpdate, FlashcardResponse
-from typing import List
+from datetime import datetime
+
+from src.models import Flashcard, User, Deck, UserCard, Source
+from src.schemas.card import FlashcardCreate, FlashcardUpdate
 
 class CardService:
     @staticmethod
@@ -17,11 +17,20 @@ class CardService:
         if not deck:
             raise ValueError("Deck not found or access denied")
         
+        # Проверяем, что source существующий
+        if card_data.source_id is not None:
+            source = db.query(Source).filter(
+                Source.id == card_data.source_id,
+                Source.user_id == current_user.id
+            ).first()
+            if not source:
+                raise ValueError("Source not found or access denied")
+
         card = Flashcard(
             id=uuid4(),
             deck_id=deck_id,
-            source_id=card_data.card_type,
-            card_type="basic",
+            source_id=card_data.source_id,
+            card_type=card_data.card_type,
             content=card_data.content,
             position=card_data.position
         )
