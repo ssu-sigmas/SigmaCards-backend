@@ -5,6 +5,7 @@ import httpx
 from src.core.config import settings
 from src.api import auth, users, decks, cards, review
 
+API_V1_PREFIX = "/api/v1"
 
 # Создать FastAPI приложение
 app = FastAPI(
@@ -77,11 +78,11 @@ async def health_check():
 # API ROUTERS
 # ==========================================
 
-app.include_router(auth.router)
-app.include_router(users.router)
-app.include_router(decks.router)
-app.include_router(cards.router)
-app.include_router(review.router)
+app.include_router(auth.router, prefix=API_V1_PREFIX)
+app.include_router(users.router, prefix=API_V1_PREFIX)
+app.include_router(decks.router, prefix=API_V1_PREFIX)
+app.include_router(cards.router, prefix=API_V1_PREFIX)
+app.include_router(review.router, prefix=API_V1_PREFIX)
 
 if __name__ == "__main__":
     import uvicorn
