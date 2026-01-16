@@ -36,7 +36,8 @@ class ReviewService:
                 "state": uc.state,
                 "stability": float(uc.stability),
                 "difficulty": float(uc.difficulty),
-                "due": uc.due.isoformat()
+                "due": uc.due.isoformat(),
+                "version": uc.version,
             })
         return response
     
@@ -53,6 +54,7 @@ class ReviewService:
         user_card_id: UUID, 
         rating: int,
         duration_ms: int,
+        expected_version: int,
         current_user: User
     ) -> ReviewResponse:
         """Оценить карточку и пересчитать FSRS"""
@@ -67,58 +69,77 @@ class ReviewService:
         if rating < 1 or rating > 4:
             raise ValueError("Rating must be 1-4")
         
+        if user_card.version != expected_version:
+            raise ValueError("Version conflict: card has already been reviewed")
+        
         now = datetime.now(timezone.utc)
         last_review_utc = ReviewService._to_utc_datetime(user_card.last_review) if user_card.last_review else None
         due_utc = ReviewService._to_utc_datetime(user_card.due) if user_card.due else now
-        
-        # Правильные параметры для fsrs-py Card
+
         fsrs_card = Card(
             due=due_utc,
             stability=max(float(user_card.stability), 0.1),
             difficulty=max(float(user_card.difficulty), 1.0),
             state=user_card.state,
-            last_review=last_review_utc
+            last_review=last_review_utc,
         )
-        
+
         rating_enum = Rating(rating)
-        new_fsrs_card, fsrs_review_log = scheduler.review_card(fsrs_card, rating_enum, now)
-        
-        # Сохраняем старое состояние
+        new_fsrs_card, _ = scheduler.review_card(fsrs_card, rating_enum, now)
+
         state_before = user_card.state
-        
-        # Обновляем UserCard новыми значениями из FSRS
-        user_card.due = new_fsrs_card.due
-        user_card.stability = new_fsrs_card.stability
-        user_card.difficulty = new_fsrs_card.difficulty
-        user_card.state = int(new_fsrs_card.state)
-        user_card.elapsed_days = getattr(new_fsrs_card, 'elapsed_days', 0)
-        user_card.scheduled_days = getattr(new_fsrs_card, 'scheduled_days', 0)
-        user_card.last_review = now
-        
-        # Логируем в БД (только поля, которые есть в модели ReviewLog)
+
+        updated_rows = (
+            db.query(UserCard)
+            .filter(
+                UserCard.id == user_card_id,
+                UserCard.user_id == current_user.id,
+                UserCard.version == expected_version,
+            )
+            .update(
+                {
+                    UserCard.due: new_fsrs_card.due,
+                    UserCard.stability: new_fsrs_card.stability,
+                    UserCard.difficulty: new_fsrs_card.difficulty,
+                    UserCard.state: int(new_fsrs_card.state),
+                    UserCard.elapsed_days: getattr(new_fsrs_card, "elapsed_days", 0),
+                    UserCard.scheduled_days: getattr(new_fsrs_card, "scheduled_days", 0),
+                    UserCard.last_review: now,
+                    UserCard.version: expected_version + 1,
+                },
+                synchronize_session=False,
+            )
+        )
+
+        if updated_rows == 0:
+            db.rollback()
+            raise ValueError("Version conflict: card has already been reviewed")
+
         review_log_db = ReviewLog(
             user_id=current_user.id,
             user_card_id=user_card_id,
             rating=rating,
             state_before=state_before,
-            due_after=user_card.due,
-            stability_after=user_card.stability,
-            difficulty_after=user_card.difficulty,
+            due_after=new_fsrs_card.due,
+            stability_after=new_fsrs_card.stability,
+            difficulty_after=new_fsrs_card.difficulty,
             duration_ms=duration_ms,
-            review_datetime=now
+            review_datetime=now,
         )
-        
+
         db.add(review_log_db)
         db.commit()
-        db.refresh(user_card)
-        
+
+        new_user_card = db.query(UserCard).filter(UserCard.id == user_card_id).first()
+
         return ReviewResponse(
             user_card_id=user_card_id,
-            new_state=user_card.state,
-            next_due=user_card.due.isoformat(),
-            stability=user_card.stability,
-            difficulty=user_card.difficulty,
-            message=f"Next review: {user_card.due.strftime('%Y-%m-%d %H:%M UTC')}"
+            new_state=new_user_card.state,
+            next_due=new_user_card.due,
+            stability=new_user_card.stability,
+            difficulty=new_user_card.difficulty,
+            version=new_user_card.version,
+            message=f"Next review: {new_user_card.due.strftime('%Y-%m-%d %H:%M UTC')}",
         )
     
     @staticmethod

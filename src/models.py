@@ -62,6 +62,7 @@ class Deck(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     status = Column(String(50), nullable=False, default="private")  # private | public | shared
+    version = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -110,11 +111,12 @@ class Flashcard(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     deck_id = Column(UUID(as_uuid=True), ForeignKey("decks.id", ondelete="CASCADE"), nullable=False, index=True)
     source_id = Column(UUID(as_uuid=True), ForeignKey("sources.id", ondelete="SET NULL"), nullable=True)
-    card_type = Column(String(50), nullable=False, default="basic")  # basic | cloze | multi_choice
+    card_type = Column(String(50), nullable=False, default="key_terms")  # key_terms, facts, fill_blank, test_questions, concepts
     content = Column(JSONB, nullable=False)
     search_vector = Column(TSVECTOR, nullable=True)
     position = Column(Integer, nullable=False, default=0)
     is_suspended = Column(Boolean, nullable=False, default=False)
+    version = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -145,6 +147,7 @@ class UserCard(Base):
     scheduled_days = Column(Integer, nullable=False, default=0)
     reps = Column(Integer, nullable=False, default=0)
     lapses = Column(Integer, nullable=False, default=0)
+    version = Column(Integer, nullable=False, default=1)
 
     last_review = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

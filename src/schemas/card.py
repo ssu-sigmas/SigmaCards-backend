@@ -19,6 +19,7 @@ class FlashcardCreate(BaseModel):
     source_id: Optional[UUID] = Field(None, description="ID источника карточки (опционально)")
 
 class FlashcardUpdate(BaseModel):
+    version: int = Field(..., ge=1, description="Ожидаемая версия сущности (optimistic locking)")
     content: Optional[Dict[str, Any]] = Field(None)
     position: Optional[int] = Field(None, ge=0)
     card_type: Optional[CardType] = None
@@ -32,6 +33,7 @@ class FlashcardResponse(BaseModel):
     content: Dict[str, Any]
     position: int
     is_suspended: bool
+    version: int
     created_at: datetime
     updated_at: datetime
     

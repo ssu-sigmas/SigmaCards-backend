@@ -26,7 +26,9 @@ def create_card(
         card = CardService.create_card(db, card_data, deck_id, current_user)
         return card
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        detail = str(e)
+        status_code = 409 if "Version conflict" in detail else 404
+        raise HTTPException(status_code=status_code, detail=detail)
 
 @router.get("/decks/{deck_id}/cards", response_model=List[FlashcardResponse])
 def get_deck_cards(
@@ -68,7 +70,9 @@ def update_card(
         card = CardService.update_card(db, card_id, card_data, current_user)
         return card
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        detail = str(e)
+        status_code = 409 if "Version conflict" in detail else 404
+        raise HTTPException(status_code=status_code, detail=detail)
 
 @router.delete("/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_card(

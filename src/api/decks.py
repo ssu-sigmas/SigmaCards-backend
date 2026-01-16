@@ -73,7 +73,9 @@ def update_deck(
         deck_response.flashcards_count = DeckService.get_deck_count(deck, db)
         return deck_response
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        detail = str(e)
+        status_code = 409 if "Version conflict" in detail else 404
+        raise HTTPException(status_code=status_code, detail=detail)
 
 @router.delete("/{deck_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_deck(

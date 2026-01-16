@@ -45,10 +45,14 @@ class DeckService:
         if not deck:
             raise ValueError("Deck not found")
         
-        update_data = deck_data.dict(exclude_unset=True)
+        if deck.version != deck_data.version:
+            raise ValueError("Version conflict: deck has been modified")
+
+        update_data = deck_data.dict(exclude_unset=True, exclude={"version"})
         for field, value in update_data.items():
             setattr(deck, field, value)
         
+        deck.version += 1
         db.commit()
         db.refresh(deck)
         return deck

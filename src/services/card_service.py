@@ -90,9 +90,14 @@ class CardService:
         if not card:
             raise ValueError("Card not found or access denied")
         
-        update_data = card_data.dict(exclude_unset=True)
+        if card.version != card_data.version:
+            raise ValueError("Version conflict: card has been modified")
+
+        update_data = card_data.dict(exclude_unset=True, exclude={"version"})
         for field, value in update_data.items():
             setattr(card, field, value)
+        
+        card.version += 1
         
         db.commit()
         db.refresh(card)

@@ -51,11 +51,14 @@ def submit_review(
             user_card_id, 
             review_data.rating,
             review_data.duration_ms,
+            review_data.version,
             current_user
         )
         return result
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        detail = str(e)
+        status_code = 409 if "Version conflict" in detail else 404
+        raise HTTPException(status_code=status_code, detail=detail)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

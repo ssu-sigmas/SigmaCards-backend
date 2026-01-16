@@ -14,6 +14,7 @@ class DeckCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=1000)
 
 class DeckUpdate(BaseModel):
+    version: int = Field(..., ge=1, description="Ожидаемая версия сущности (optimistic locking)")
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=1000)
     status: Optional[DeckStatus] = None
@@ -24,6 +25,7 @@ class DeckResponse(BaseModel):
     title: str
     description: Optional[str]
     status: DeckStatus
+    version: int
     created_at: datetime
     updated_at: datetime
     flashcards_count: int = 0  # Кол-во карточек (посчитаем в сервисе)

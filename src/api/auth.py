@@ -37,7 +37,7 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
-            headers={"WWW-Authenticate": "Bearer"},  # ← Стандарт для 401
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
 @router.post("/refresh", response_model=TokenResponse)
