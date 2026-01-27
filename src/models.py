@@ -195,3 +195,21 @@ class CardAction(Base):
 
     user = relationship("User", back_populates="card_actions")
     user_card = relationship("UserCard", back_populates="card_actions")
+
+class IdempotencyKey(Base):
+    __tablename__ = "idempotency_keys"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    key = Column(String(255), nullable=False)
+    endpoint = Column(String(100), nullable=False)
+    request_hash = Column(String(64), nullable=False)
+    response_payload = Column(JSONB, nullable=False)
+    status_code = Column(Integer, nullable=False, default=500)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_idempotency_keys_user_key_endpoint", "user_id", "key", "endpoint", unique=True),
+    )
+
+    

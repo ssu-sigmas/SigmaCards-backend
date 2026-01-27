@@ -19,6 +19,20 @@ services:
     networks:
       - sigmacards-network
 
+  redis:
+    image: redis:8-alpine
+    container_name: sigmacards-redis
+    ports:
+      - "6379:6379"
+    command: /bin/sh -c 'redis-server --requirepass "$$REDIS_PASSWORD" --save "" --appendonly no'
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sigmacards-network    
+
   # FastAPI приложение (ОСНОВНОЙ БЭКЕНД - БЕЗ ML)
   api:
     build: .
@@ -32,6 +46,8 @@ services:
       - .env
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     restart: unless-stopped
     networks:
