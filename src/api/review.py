@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from src.schemas.review import ReviewRequest, ReviewResponse, DueCardResponse
 from src.services.review_service import ReviewService
-from src.core.dependencies import get_current_user
+from src.services.idempotency_service import IdempotencyService
+from src.core.dependencies import get_current_user, get_idempotency_key
 from src.db.database import get_db
 from src.models import User, UserCard
 from typing import List
@@ -34,6 +35,7 @@ def submit_review(
     user_card_id: UUID,
     review_data: ReviewRequest,
     current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Depends(get_idempotency_key),
     db: Session = Depends(get_db)
 ):
     """
@@ -46,19 +48,27 @@ def submit_review(
     - 4 = Easy (легко)
     """
     try:
-        result = ReviewService.submit_review(
-            db, 
-            user_card_id, 
-            review_data.rating,
-            review_data.duration_ms,
-            review_data.version,
-            current_user
+        return IdempotencyService.execute(
+            namespace="review-card",
+            idempotency_key=idempotency_key,
+            user_id=current_user.id,
+            payload=review_data.model_dump(mode='json'),
+            operation=lambda: ReviewService.submit_review(
+                db, 
+                user_card_id, 
+                review_data.rating,
+                review_data.duration_ms,
+                review_data.version,
+                current_user,
+            ),
+            response_model=ReviewResponse,
         )
-        return result
     except ValueError as e:
         detail = str(e)
         status_code = 409 if "Version conflict" in detail else 404
         raise HTTPException(status_code=status_code, detail=detail)
+    except HTTPException: 
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

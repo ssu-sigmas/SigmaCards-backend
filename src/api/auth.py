@@ -2,14 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from src.schemas.auth import UserRegister, UserLogin, TokenResponse, UserResponse
 from src.services.auth_service import AuthService
+from src.services.idempotency_service import IdempotencyService
+from src.core.dependencies import get_idempotency_key
 from src.core.security import verify_token
 from src.db.database import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=TokenResponse)
-def register(user_data: UserRegister, db: Session = Depends(get_db)):
-    try:
+def register(
+    user_data: UserRegister, 
+    idempotency_key: str | None = Depends(get_idempotency_key),
+    db: Session = Depends(get_db)
+):
+    def register_response() -> TokenResponse:
         user = AuthService.register_user(db, user_data)
         access_token, refresh_token = AuthService.create_tokens(user.id)
         return {
@@ -17,6 +23,16 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
             "refresh_token": refresh_token,
             "token_type": "bearer"
         }
+    try:
+        return IdempotencyService.execute(
+            namespace="auf-register",
+            idempotency_key=idempotency_key,
+            user_id=user_data.email,
+            payload=user_data.model_dump(mode='json'),
+            operation=register_response,
+            response_schema=TokenResponse,
+        )
+    except HTTPException: raise
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

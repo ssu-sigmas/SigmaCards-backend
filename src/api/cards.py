@@ -5,11 +5,12 @@ from typing import List
 from uuid import UUID
 from src.schemas.card import FlashcardCreate, FlashcardUpdate, FlashcardResponse
 from src.services.card_service import CardService
-from src.core.dependencies import get_current_user
+from src.core.dependencies import get_current_user, get_idempotency_key
 from src.db.database import get_db
 from src.models import User
 from src.services.ml_service import MLService
 from src.schemas.card import GenerateCardsRequest, MLGeneratedCard
+from src.services.idempotency_service import IdempotencyService
 from src.services.ml_service import ml_service
 
 router = APIRouter(prefix="/cards", tags=["cards"])
@@ -19,12 +20,20 @@ def create_card(
     deck_id: UUID,
     card_data: FlashcardCreate,
     current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Depends(get_idempotency_key),
     db: Session = Depends(get_db)
 ):
     """Создать карточку в колоде"""
     try:
-        card = CardService.create_card(db, card_data, deck_id, current_user)
-        return card
+        return IdempotencyService.execute(
+            namespace=f"create-card:{deck_id}",
+            idempotency_key=idempotency_key,
+            user_id=current_user.id,
+            payload=card_data.model_dump(mode='json'),
+            operation=lambda: CardService.create_card(db, card_data, deck_id, current_user),
+            response_schema=FlashcardResponse,
+        )
+    except HTTPException: raise
     except ValueError as e:
         detail = str(e)
         status_code = 409 if "Version conflict" in detail else 404

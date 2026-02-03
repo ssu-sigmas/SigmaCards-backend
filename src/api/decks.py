@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from src.schemas.deck import DeckCreate, DeckUpdate, DeckResponse
 from src.services.deck_service import DeckService
-from src.core.dependencies import get_current_user
+from src.services.idempotency_service import IdempotencyService
+from src.core.dependencies import get_current_user, get_idempotency_key
 from src.db.database import get_db
 from src.models import User, Deck
 from uuid import UUID
@@ -14,14 +15,25 @@ router = APIRouter(prefix="/decks", tags=["decks"])
 def create_deck(
     deck_data: DeckCreate,
     current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Depends(get_idempotency_key),
     db: Session = Depends(get_db)
 ):
     """Создать новую колоду"""
-    try:
+    def create_deck_response() -> DeckResponse:
         deck = DeckService.create_deck(db, deck_data, current_user)
         deck_response = DeckResponse.from_orm(deck)
         deck_response.flashcards_count = DeckService.get_deck_count(deck, db)
         return deck_response
+    try:
+        return IdempotencyService.execute(
+            namespace="create-deck",
+            idempotency_key=idempotency_key,
+            user_id=current_user.id,
+            payload=deck_data.model.dump(mode="json"),
+            operation=create_deck_response,
+            response_schema=DeckResponse,
+        )
+    except HTTPException: raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

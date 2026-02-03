@@ -25,6 +25,8 @@ services:
     ports:
       - "6379:6379"
     command: /bin/sh -c 'redis-server --requirepass "$$REDIS_PASSWORD" --save "" --appendonly no'
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", 'redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG']
       interval: 10s
