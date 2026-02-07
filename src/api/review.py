@@ -61,7 +61,7 @@ def submit_review(
                 review_data.version,
                 current_user,
             ),
-            response_model=ReviewResponse,
+            response_schema=ReviewResponse,
         )
     except ValueError as e:
         detail = str(e)

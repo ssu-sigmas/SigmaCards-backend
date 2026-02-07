@@ -3,12 +3,10 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session, joinedload
 from src.models import UserCard, ReviewLog, User, Flashcard
-from src.schemas.review import ReviewRequest, ReviewResponse, DueCardResponse
+from src.schemas.review import ReviewResponse
 from uuid import UUID
-from fsrs import Scheduler, Card, Rating
-import math
-
-scheduler = Scheduler()
+from fsrs import Rating
+from src.services.fsrs_service import FsrsService
 
 
 class ReviewService:
@@ -42,13 +40,6 @@ class ReviewService:
         return response
     
     @staticmethod
-    def _to_utc_datetime(dt: datetime) -> datetime:
-        """Приводит datetime к UTC timezone-aware"""
-        if dt.tzinfo is None:
-            return dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc)
-    
-    @staticmethod
     def submit_review(
         db: Session, 
         user_card_id: UUID, 
@@ -73,22 +64,18 @@ class ReviewService:
             raise ValueError("Version conflict: card has already been reviewed")
         
         now = datetime.now(timezone.utc)
-        last_review_utc = ReviewService._to_utc_datetime(user_card.last_review) if user_card.last_review else None
-        due_utc = ReviewService._to_utc_datetime(user_card.due) if user_card.due else now
-
-        fsrs_card = Card(
-            due=due_utc,
-            stability=max(float(user_card.stability), 0.1),
-            difficulty=max(float(user_card.difficulty), 1.0),
+        scheduler = FsrsService.build_scheduler(current_user)
+        fsrs_card = FsrsService.restore_card(
+            due=user_card.due,
+            stability=float(user_card.stability),
+            difficulty=float(user_card.difficulty),
             state=user_card.state,
-            last_review=last_review_utc,
+            step=user_card.step,
+            last_review=user_card.last_review,
         )
-
         rating_enum = Rating(rating)
-        new_fsrs_card, _ = scheduler.review_card(fsrs_card, rating_enum, now)
-
+        new_fsrs_card, _ = scheduler.review_card(fsrs_card, rating_enum, now, review_duration=duration_ms)
         state_before = user_card.state
-
         updated_rows = (
             db.query(UserCard)
             .filter(

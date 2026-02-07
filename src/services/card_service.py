@@ -4,6 +4,7 @@ from uuid import uuid4, UUID
 from datetime import datetime
 
 from src.models import Flashcard, User, Deck, UserCard, Source
+from src.services.fsrs_service import FsrsService
 from src.schemas.card import FlashcardCreate, FlashcardUpdate
 
 class CardService:
@@ -37,13 +38,14 @@ class CardService:
         db.add(card)
         db.flush()
         
-        # Создаём UserCard для FSRS - связь пользователя с карточкой
+        initial_card = FsrsService.create_initial_card()
         user_card = UserCard(
             id=uuid4(),
             user_id=current_user.id,
             card_id=card.id,
-            due=datetime.utcnow(), # FSRS вообще предполагает +1 день, но как по мне странно
-            state=0,  # NEW
+            due=initial_card.due.replace(tzinfo=None),
+            state=int(initial_card.state),
+            step=initial_card.step,
             stability=0.0,
             difficulty=0.0,
             elapsed_days=0,

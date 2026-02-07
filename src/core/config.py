@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     IDEMPOTENCY_LOCK_TTL_SECONDS: int = 30
     IDEMPOTENCY_WAIT_TIMEOUT_SECONDS: float = 5.0
     IDEMPOTENCY_WAIT_INTERVAL_SECONDS: float = 0.1
+    FSRS_DESIRED_RETENTION: float = 0.9
+    FSRS_OPTIMIZER_MIN_REVIEWS: int = 50
 
     class Config:
         env_file = ".env"

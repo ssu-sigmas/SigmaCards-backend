@@ -29,7 +29,7 @@ def create_deck(
             namespace="create-deck",
             idempotency_key=idempotency_key,
             user_id=current_user.id,
-            payload=deck_data.model.dump(mode="json"),
+            payload=deck_data.model_dump(mode="json"),
             operation=create_deck_response,
             response_schema=DeckResponse,
         )
