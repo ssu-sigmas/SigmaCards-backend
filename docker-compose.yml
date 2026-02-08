@@ -55,6 +55,23 @@ services:
     networks:
       - sigmacards-network
 
+  optimizer-cron:
+    build: .
+    container_name: sigmacards-optimizer-cron
+    command: /app/scripts/start_optimizer_cron.sh
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      FSRS_OPTIMIZER_CRON_SCHEDULE: "${FSRS_OPTIMIZER_CRON_SCHEDULE:-0 3 * * *}"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - sigmacards-network
+
 volumes:
   postgres_data:
 

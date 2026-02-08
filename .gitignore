@@ -20,6 +20,7 @@ pip-delete-this-directory.txt
 .env.db
 .env.local
 .env.*.local
+.cron_env
 
 # ==========================================
 # IDE

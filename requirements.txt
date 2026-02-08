@@ -19,7 +19,7 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.1.1
 
 # SRS Algorithm
-fsrs[optimizer] = 6.3.1
+fsrs[optimizer]==6.3.1
 
 # Environment
 python-dotenv==1.0.0
