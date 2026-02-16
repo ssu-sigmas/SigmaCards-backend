@@ -12,8 +12,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int
     ENV: str = "development"
     ALGORITHM: str = "HS256"
-    ML_SERVICE_URL: str
-    ML_SERVICE_TIMEOUT: int
+    ML_SERVICE_TIMEOUT: int = 30
     LOG_LEVEL: str = "INFO"
     IDEMPOTENCY_RESPONSE_TTL_SECONDS: int = 24 * 60 * 60
     IDEMPOTENCY_LOCK_TTL_SECONDS: int = 30
@@ -21,6 +20,10 @@ class Settings(BaseSettings):
     IDEMPOTENCY_WAIT_INTERVAL_SECONDS: float = 0.1
     FSRS_DESIRED_RETENTION: float = 0.9
     FSRS_OPTIMIZER_MIN_REVIEWS: int = 50
+    KAFKA_BOOTSTRAP_SERVERS: str = "kafka:9092"
+    KAFKA_ML_REQUEST_TOPIC: str = "ml.cards.generate.request"
+    KAFKA_ML_RESPONSE_TOPIC: str = "ml.cards.generate.response"
+    KAFKA_ML_CONSUMER_GROUP: str = "sigmacards-ml-client"
 
     class Config:
         env_file = ".env"

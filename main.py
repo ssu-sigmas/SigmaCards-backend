@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import httpx
 
 from src.core.config import settings
 from src.api import auth, users, decks, cards, review
@@ -32,23 +31,6 @@ app.add_middleware(
 
 
 # ==========================================
-# ML SERVICE CLIENT
-# ==========================================
-
-
-async def call_ml_service(endpoint: str, data: dict):
-    """Вызвать ML микросервис"""
-    url = f"{settings.ML_SERVICE_URL}{endpoint}"
-    try:
-        async with httpx.AsyncClient(timeout=settings.ML_SERVICE_TIMEOUT) as client:
-            response = await client.post(url, json=data)
-            response.raise_for_status()
-            return response.json()
-    except httpx.HTTPError as e:
-        return {"error": str(e), "status": "ml_service_error"}
-
-
-# ==========================================
 # ROUTES
 # ==========================================
 
@@ -69,8 +51,7 @@ async def health_check():
     return {
         "status": "ok",
         "service": "sigmacards-api",
-        "environment": settings.ENV,
-        "ml_service": settings.ML_SERVICE_URL
+        "environment": settings.ENV
     }
 
 
