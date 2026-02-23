@@ -10,7 +10,7 @@ from src.db.database import get_db
 from src.models import User
 from src.schemas.card import GenerateCardsRequest, MLGeneratedCard
 from src.services.idempotency_service import IdempotencyService
-#from src.services.ml_service import ml_service
+from src.services.ml_service import ml_service
 
 router = APIRouter(prefix="/cards", tags=["cards"])
 

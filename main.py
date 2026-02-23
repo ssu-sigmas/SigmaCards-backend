@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.core.config import settings
 from src.api import auth, users, decks, cards, review
 
+from src.services.ml_service import ml_service
+
 API_V1_PREFIX = "/api/v1"
 
 # Создать FastAPI приложение
@@ -54,6 +56,13 @@ async def health_check():
         "environment": settings.ENV
     }
 
+@app.on_event("startup")
+async def startup_event():
+    await ml_service.startup()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await ml_service.close()
 
 # ==========================================
 # API ROUTERS
