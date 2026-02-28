@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     KAFKA_ML_REQUEST_TOPIC: str = "ml.cards.generate.request"
     KAFKA_ML_RESPONSE_TOPIC: str = "ml.cards.generate.response"
     KAFKA_ML_CONSUMER_GROUP: str = "sigmacards-ml-client"
+    STORAGE_PROVIDER: str
+    S3_ENDPOINT: str
+    S3_PUBLIC_ENDPOINT: str
+    S3_ACCESS_KEY: str
+    S3_SECRET_KEY: str
+    S3_BUCKET: str
+    S3_SECURE: bool
 
     class Config:
         env_file = ".env"

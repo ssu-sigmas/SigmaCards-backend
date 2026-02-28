@@ -80,7 +80,24 @@ services:
       kafka:
         condition: service_healthy
     networks:
-      - sigmacards-network    
+      - sigmacards-network
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: sigmacards-rustfs
+    env_file:
+      - .env
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - rustfs_data:/data
+    restart: unless-stopped
+    networks:
+      - sigmacards-network
 
   api:
     build: .
@@ -121,6 +138,7 @@ services:
 volumes:
   postgres_data:
   kafka_data:
+  rustfs_data:
 
 networks:
   sigmacards-network:
