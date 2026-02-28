@@ -156,7 +156,6 @@ class UserCard(Base):
     user = relationship("User", back_populates="user_cards")
     card = relationship("Flashcard", back_populates="user_cards")
     review_logs = relationship("ReviewLog", back_populates="user_card", cascade="all, delete-orphan")
-    card_actions = relationship("CardAction", back_populates="user_card", cascade="all, delete-orphan")
 
 
 class ReviewLog(Base):
@@ -183,16 +182,23 @@ class ReviewLog(Base):
     user_card = relationship("UserCard", back_populates="review_logs")
 
 
-class CardAction(Base):
-    __tablename__ = "card_actions"
+# ==========================================
+# MEDIA
+# ==========================================
+class Image(Base):
+    __tablename__ = "images"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_card_id = Column(UUID(as_uuid=True), ForeignKey("user_cards.id", ondelete="CASCADE"), nullable=False, index=True)
-
-    action = Column(String(50), nullable=False)  # flag | mark_easy | suspend | custom_due
-    action_metadata = Column(JSONB, nullable=True)
+    object_name = Column(Text, nullable=False, unique=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    
+    cards = relationship("CardImage", back_populates="image", cascade="all, delete-orphan")
 
-    user = relationship("User", back_populates="card_actions")
-    user_card = relationship("UserCard", back_populates="card_actions")
+class CardImage(Base):
+    __tablename__ = "card_images"
+
+    card_id = Column(UUID(as_uuid=True), ForeignKey("flashcards.id", ondelete="CASCADE"), primary_key=True)
+    image_id = Column(UUID(as_uuid=True), ForeignKey("images.id", ondelete="CASCADE"), primary_key=True)
+
+    card = relationship("Flashcard", back_populates="card_images")
+    image = relationship("Image", back_populates="cards")
