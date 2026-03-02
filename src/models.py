@@ -31,7 +31,6 @@ class User(Base):
     deck_subscriptions = relationship("DeckSubscription", back_populates="user", cascade="all, delete-orphan")
     user_cards = relationship("UserCard", back_populates="user", cascade="all, delete-orphan")
     review_logs = relationship("ReviewLog", back_populates="user", cascade="all, delete-orphan")
-    card_actions = relationship("CardAction", back_populates="user", cascade="all, delete-orphan")
 
 
 class RefreshSession(Base):
@@ -111,7 +110,6 @@ class Flashcard(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     deck_id = Column(UUID(as_uuid=True), ForeignKey("decks.id", ondelete="CASCADE"), nullable=False, index=True)
     source_id = Column(UUID(as_uuid=True), ForeignKey("sources.id", ondelete="SET NULL"), nullable=True)
-    card_type = Column(String(50), nullable=False, default="key_terms")  # key_terms, facts, fill_blank, test_questions, concepts
     content = Column(JSONB, nullable=False)
     search_vector = Column(TSVECTOR, nullable=True)
     position = Column(Integer, nullable=False, default=0)
@@ -123,6 +121,7 @@ class Flashcard(Base):
     deck = relationship("Deck", back_populates="flashcards")
     source = relationship("Source", back_populates="flashcards")
     user_cards = relationship("UserCard", back_populates="card", cascade="all, delete-orphan")
+    card_images = relationship("CardImage", back_populates="card", cascade="all, delete-orphan")
 
 
 # ==========================================

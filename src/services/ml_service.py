@@ -8,10 +8,11 @@ from typing import Dict, List, Optional
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 from src.core.config import settings
-from src.schemas.card import CardType, MLGeneratedCard
+from src.schemas.card import MLGeneratedCard
 
 logger = logging.getLogger(__name__)
 
+# IMPORTANT TODO: everything was broken by changes in card model. Currently doesn't work, will be patched with gRPC soon.
 
 class MLService:
     def __init__(self):
@@ -80,7 +81,7 @@ class MLService:
         if not self._is_running:
             await self.startup()
 
-        card_types = list(CardType)
+        card_types = list(['simple']) # TODO
         selected_types = random.sample(card_types * 2, min(count, len(card_types)))
 
         tasks = [self._generate_single_card(text, card_type) for card_type in selected_types]
@@ -115,7 +116,7 @@ class MLService:
 
         return cards[:count]
 
-    async def _generate_single_card(self, text: str, card_type: CardType):
+    async def _generate_single_card(self, text: str, card_type: str):
         if not self.producer:
             raise RuntimeError("Kafka producer is not initialized")
 
@@ -165,7 +166,7 @@ class MLService:
         except Exception as exc:
             logger.exception("Kafka response consumer failed: %s", exc)
 
-    def _fallback_card(self, card_type: CardType, text: str):
+    def _fallback_card(self, card_type: str, text: str):
         return MLGeneratedCard(
             content={
                 "front": f"[{card_type.value.upper()}]",

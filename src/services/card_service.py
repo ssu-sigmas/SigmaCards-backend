@@ -31,8 +31,7 @@ class CardService:
             id=uuid4(),
             deck_id=deck_id,
             source_id=card_data.source_id,
-            card_type=card_data.card_type,
-            content=card_data.content,
+            content=card_data.content.model_dump(),
             position=card_data.position
         )
         db.add(card)
@@ -89,22 +88,23 @@ class CardService:
             Flashcard.id == card_id,
             Deck.user_id == current_user.id
         ).first()
+
         if not card:
             raise ValueError("Card not found or access denied")
-        
+
         if card.version != card_data.version:
             raise ValueError("Version conflict: card has been modified")
 
-        update_data = card_data.dict(exclude_unset=True, exclude={"version"})
+        update_data = card_data.model_dump(exclude_unset=True, exclude={"version"})
+
         for field, value in update_data.items():
             setattr(card, field, value)
-        
+
         card.version += 1
-        
         db.commit()
         db.refresh(card)
         return card
-    
+            
     @staticmethod
     def delete_card(db: Session, card_id: UUID, current_user: User):
         card = db.query(Flashcard).join(Deck).filter(
