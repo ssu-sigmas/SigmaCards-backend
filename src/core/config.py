@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str
     S3_BUCKET: str
     S3_SECURE: bool
+    IMAGE_UPLOAD_URL_TTL_SECONDS: int = 600
+    IMAGE_ORPHAN_CLEANUP_INTERVAL_SECONDS: int = 86400
+    IMAGE_ORPHAN_CLEANUP_AGE_HOURS: int = 24
+    IMAGE_MAX_SIZE_BYTES: int = 10485760
 
     class Config:
         env_file = ".env"

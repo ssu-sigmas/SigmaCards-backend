@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import settings
-from src.api import auth, users, decks, cards, review
+from src.api import auth, users, decks, cards, review, images
 
 from src.services.ml_service import ml_service
 
@@ -73,6 +73,7 @@ app.include_router(users.router, prefix=API_V1_PREFIX)
 app.include_router(decks.router, prefix=API_V1_PREFIX)
 app.include_router(cards.router, prefix=API_V1_PREFIX)
 app.include_router(review.router, prefix=API_V1_PREFIX)
+app.include_router(images.router, prefix=API_V1_PREFIX)
 
 if __name__ == "__main__":
     import uvicorn
