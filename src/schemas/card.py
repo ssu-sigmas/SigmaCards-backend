@@ -11,25 +11,35 @@ class TextBlock(BaseModel):
     content: str
     meta: Optional[Dict[str, Any]] = None # adhoc для гибкости (мало ли...)
 
-class ImageBlock(BaseModel):
+class ImageBlockWrite(BaseModel):
     id: str
     type: Literal['image']
-    image_id: str
+    image_id: UUID
 
-Block = Annotated[Union[TextBlock, ImageBlock], Field(discriminator="type")]
+class ImageBlockRead(BaseModel):
+    id: str 
+    type: Literal['image']
+    image_url: str
 
-class CardContent(BaseModel):
-    front: List[Block]
-    back: List[Block]
+WriteBlock = Annotated[Union[TextBlock, ImageBlockWrite], Field(discriminator="type")]
+ReadBlock = Annotated[Union[TextBlock, ImageBlockRead], Field(discriminator="type")]
+
+class CardContentWrite(BaseModel):
+    front: List[WriteBlock]
+    back: List[WriteBlock]
+
+class CardContentRead(BaseModel):
+    front: List[ReadBlock]
+    back: List[ReadBlock]
 
 class FlashcardCreate(BaseModel):
-    content: CardContent = Field(..., description="JSON карточки (back/front)")
+    content: CardContentWrite = Field(..., description="JSON карточки (back/front)")
     position: Optional[int] = Field(0, ge=0)
     source_id: Optional[UUID] = Field(None, description="ID источника карточки (опционально)")
 
 class FlashcardUpdate(BaseModel):
     version: int = Field(..., ge=1, description="Ожидаемая версия сущности (optimistic locking)")
-    content: Optional[CardContent] = Field(None)
+    content: Optional[CardContentWrite] = Field(None)
     position: Optional[int] = Field(None, ge=0)
     is_suspended: Optional[bool] = Field(None)
 
@@ -37,7 +47,7 @@ class FlashcardResponse(BaseModel):
     id: UUID
     deck_id: UUID
     source_id: Optional[UUID]
-    content: CardContent
+    content: CardContentRead
     position: int
     is_suspended: bool
     version: int
@@ -52,4 +62,4 @@ class GenerateCardsRequest(BaseModel):
     count: int = Field(5, ge=1, le=20, description="Количество карточек (1-20)")
 
 class MLGeneratedCard(BaseModel):
-    content: CardContent
+    content: CardContentRead

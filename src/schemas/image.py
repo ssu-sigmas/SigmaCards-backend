@@ -1,10 +1,12 @@
 from pydantic import BaseModel, Field
+from uuid import UUID
 
 
 class ImageUploadUrlRequest(BaseModel):
     content_type: str = Field(..., description="MIME тип изображения")
 
 class ImageUploadUrlResponse(BaseModel):
+    image_id: UUID
     upload_url: str
     object_name: str
     expires_in: int

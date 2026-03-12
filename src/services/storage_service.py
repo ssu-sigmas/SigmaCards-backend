@@ -55,3 +55,8 @@ class StorageService:
     def delete_object(object_name: str):
         client = StorageService.get_s3_client()
         client.delete_object(Bucket=settings.S3_BUCKET, Key=object_name)
+
+    @staticmethod
+    def get_public_object_url(object_name: str) -> str:
+        base = settings.S3_PUBLIC_ENDPOINT.rstrip('/')
+        return f"{base}/{settings.S3_BUCKET}/{object_name}"

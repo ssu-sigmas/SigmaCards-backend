@@ -12,6 +12,7 @@ from typing import List
 
 router = APIRouter(prefix="/review", tags=["review"])
 
+# TODO: возвращать надо не просто usercard, но и еще информацию о самой карточке ибо это будет дофига хттп запросов
 @router.get("/due", response_model=List[DueCardResponse])
 def get_due_cards(
     deck_id: UUID = Query(None),
