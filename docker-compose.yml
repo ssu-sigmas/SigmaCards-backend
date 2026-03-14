@@ -120,14 +120,15 @@ services:
 
   optimizer-cron:
     build: .
-    container_name: sigmacards-optimizer-cron
-    command: /app/scripts/start_optimizer_cron.sh
+    container_name: sigmacards-cron
+    command: /app/scripts/start_cron.sh
     volumes:
       - .:/app
     env_file:
       - .env
     environment:
       FSRS_OPTIMIZER_CRON_SCHEDULE: "${FSRS_OPTIMIZER_CRON_SCHEDULE:-0 3 * * *}"
+      IMAGE_ORPHAN_CLEANUP_CRON_SCHEDULE: "${IMAGE_ORPHAN_CLEANUP_CRON_SCHEDULE:-0 4 * * *}"
     depends_on:
       db:
         condition: service_healthy
