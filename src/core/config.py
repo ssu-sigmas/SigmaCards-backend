@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     IMAGE_ORPHAN_CLEANUP_INTERVAL_SECONDS: int = 86400
     IMAGE_ORPHAN_CLEANUP_AGE_HOURS: int = 24
     IMAGE_MAX_SIZE_BYTES: int = 10485760
+    APP_PORT: int = 8000
+    SSL_CERTFILE: str | None = None
+    SSL_KEYFILE: str | None = None
 
     class Config:
         env_file = ".env"

@@ -76,10 +76,17 @@ app.include_router(review.router, prefix=API_V1_PREFIX)
 app.include_router(images.router, prefix=API_V1_PREFIX)
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+    import asyncio
+    from hypercorn.asyncio import serve
+    from hypercorn.config import Config
+
+    config = Config()
+    config.bind = [f"0.0.0.0:{settings.APP_PORT}"]
+
+    ssl_certfile = settings.SSL_CERTFILE
+    ssl_keyfile = settings.SSL_KEYFILE
+    if ssl_certfile and ssl_keyfile:
+        config.certfile = ssl_certfile
+        config.keyfile = ssl_keyfile
+
+    asyncio.run(serve(app, config))

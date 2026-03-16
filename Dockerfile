@@ -18,5 +18,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копировать код приложения
 COPY . .
 
-# Команда по умолчанию
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Команда по умолчанию (HTTP/2 через ALPN при наличии TLS-сертификатов)
+CMD ["sh", "-c", "hypercorn main:app --bind 0.0.0.0:${APP_PORT:-8000} ${SSL_CERTFILE:+--certfile $SSL_CERTFILE} ${SSL_KEYFILE:+--keyfile $SSL_KEYFILE}"]
