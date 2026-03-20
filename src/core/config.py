@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     IMAGE_ORPHAN_CLEANUP_AGE_HOURS: int = 24
     IMAGE_MAX_SIZE_BYTES: int = 10485760
     APP_PORT: int = 8000
+    GRPC_HOST: str = "0.0.0.0"
+    GRPC_PORT: int = 50051
     SSL_CERTFILE: str | None = None
     SSL_KEYFILE: str | None = None
 

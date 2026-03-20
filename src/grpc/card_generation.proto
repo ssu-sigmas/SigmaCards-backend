@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package sigmacards.cards.v1;
+
+service CardGenerationService {
+  rpc GenerateCards (stream GenerateCardsStreamRequest) returns (stream GenerateCardsStreamResponse);
+}
+
+message GenerateCardsRequest {
+  string text = 1;
+  uint32 count = 2;
+}
+
+message StopGenerationRequest {
+  string reason = 1;
+}
+
+message GenerateCardsStreamRequest {
+  oneof payload {
+    GenerateCardsRequest generate = 1;
+    StopGenerationRequest stop = 2;
+  }
+}
+
+message TextBlock {
+  string id = 1;
+  string content = 2;
+}
+
+message CardContent {
+  repeated TextBlock front = 1;
+  repeated TextBlock back = 2;
+}
+
+message GeneratedCard {
+  CardContent content = 1;
+}
+
+message StatusMessage {
+  string message = 1;
+}
+
+message CompletedMessage {
+  bool stopped_by_user = 1;
+}
+
+message ErrorMessage {
+  string message = 1;
+}
+
+message GenerateCardsStreamResponse {
+  oneof payload {
+    StatusMessage status = 1;
+    GeneratedCard card = 2;
+    CompletedMessage completed = 3;
+    ErrorMessage error = 4;
+  }
+}
