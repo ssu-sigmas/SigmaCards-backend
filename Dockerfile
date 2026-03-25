@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 # Установить Python зависимости
 COPY requirements-torch.txt .
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements-torch.txt
+RUN pip install -r requirements-torch.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Копировать код приложения

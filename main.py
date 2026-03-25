@@ -5,8 +5,14 @@ from src.core.config import settings
 from src.api import auth, users, decks, cards, review, images
 
 from src.services.ml_service import ml_service
+from src.services.kafka_router import kafka_router
+from src.grpc.server import CardGenerationGrpcServer
+
+import logging
 
 API_V1_PREFIX = "/api/v1"
+
+logging.basicConfig(level=logging.INFO)
 
 # Создать FastAPI приложение
 app = FastAPI(
@@ -58,10 +64,21 @@ async def health_check():
 
 @app.on_event("startup")
 async def startup_event():
+    await kafka_router.start()
     await ml_service.startup()
+    app.state.grpc_server = CardGenerationGrpcServer(
+        host=settings.GRPC_HOST,
+        port=settings.GRPC_PORT,
+    )
+    await app.state.grpc_server.start()
 
 @app.on_event("shutdown")
 async def shutdown_event():
+    await kafka_router.stop()
+    grpc_server = getattr(app.state, "grpc_server", None)
+    if grpc_server:
+        await grpc_server.stop()
+
     await ml_service.close()
 
 # ==========================================

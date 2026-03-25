@@ -57,7 +57,6 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
       - KAFKA_KRAFT_CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
       - KAFKA_LOG4J_ROOT_LOGLEVEL=WARN
-      
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
@@ -104,9 +103,15 @@ services:
   api:
     build: .
     container_name: sigmacards-api
-    command: /bin/sh -c 'hypercorn main:app --bind 0.0.0.0:8010 --reload $${SSL_CERTFILE:+--certfile $$SSL_CERTFILE} $${SSL_KEYFILE:+--keyfile $$SSL_KEYFILE}'
+    command: >
+      /bin/sh -c "
+      chmod +x scripts/generate_grpc.sh &&
+      ./scripts/generate_grpc.sh &&
+      hypercorn main:app --bind 0.0.0.0:8010 --reload $${SSL_CERTFILE:+--certfile $$SSL_CERTFILE} $${SSL_KEYFILE:+--keyfile $$SSL_KEYFILE}
+      "
     ports:
       - "8010:8010"
+      - "50051:50051"
     volumes:
       - .:/app
       - ./certs:/app/certs:ro
@@ -146,4 +151,4 @@ volumes:
 
 networks:
   sigmacards-network:
-    driver: bridge
+    external: true
