@@ -7,6 +7,7 @@ from src.api import auth, users, decks, cards, review, images
 from src.services.ml_service import ml_service
 from src.services.kafka_router import kafka_router
 from src.grpc.server import CardGenerationGrpcServer
+from src.services.storage_service import StorageService
 
 import logging
 
@@ -71,6 +72,8 @@ async def startup_event():
         port=settings.GRPC_PORT,
     )
     await app.state.grpc_server.start()
+    StorageService.ensure_chunks_lifecycle(settings.S3_TEXT_TTL_DAYS)
+    
 
 @app.on_event("shutdown")
 async def shutdown_event():

@@ -32,31 +32,34 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
             yield self._error("first message must contain generate payload")
             return
 
+        yield self._status("начинаем обработку")
+
         text = first_request.generate.text
         count = max(1, first_request.generate.count)
 
         generation_id = str(uuid.uuid4())
-        logger.info("made generation_id")
+        logger.info("generation_id=%s", generation_id)
+
         queue = kafka_router.subscribe(generation_id)
-        logger.info("subscribed")
-        await ml_service.send_generation_requests(
-            generation_id=generation_id,
-            text=text,
-            count=count,
-        )
-        logger.info("generated requests in kafka")
-
-        asyncio.create_task(self._listen_stop(request_iterator, stop_event))
-
-        yield card_generation_pb2.GenerateCardsStreamResponse(
-            status=card_generation_pb2.StatusMessage(message="анализируем текст")
-        )
-
-        received = 0
 
         try:
-            while received < count:
+            real_tasks = await ml_service.send_generation_requests(
+                generation_id=generation_id,
+                text=text,
+                count=count,
+            )
+
+            logger.info("sent %s tasks to kafka", real_tasks)
+
+            asyncio.create_task(self._listen_stop(request_iterator, stop_event))
+
+            yield self._status("анализируем текст")
+
+            received_tasks = 0
+
+            while received_tasks < real_tasks:
                 if stop_event.is_set():
+                    logger.info("stopped by user")
                     break
 
                 try:
@@ -65,13 +68,17 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
                     logger.error("timeout waiting kafka")
                     break
 
-                card = self._build_card_from_payload(payload)
+                cards = payload.get("cards", [])
 
-                yield card_generation_pb2.GenerateCardsStreamResponse(
-                    card=card
-                )
+                for card_data in cards:
+                    if stop_event.is_set():
+                        break
 
-                received += 1
+                    yield card_generation_pb2.GenerateCardsStreamResponse(
+                        card=self._build_card(card_data)
+                    )
+
+                received_tasks += 1
 
         except Exception:
             logger.exception("gRPC stream crashed")
@@ -85,35 +92,38 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
                 stopped_by_user=stop_event.is_set()
             )
         )
-    
+
     async def _listen_stop(self, request_iterator, stop_event):
-        async for incoming in request_iterator:
-            if incoming.WhichOneof("payload") == "stop":
-                stop_event.set()
-                return
-            
+        try:
+            async for incoming in request_iterator:
+                if incoming.WhichOneof("payload") == "stop":
+                    stop_event.set()
+                    return
+        except Exception:
+            stop_event.set()
+
+    def _status(self, message: str):
+        return card_generation_pb2.GenerateCardsStreamResponse(
+            status=card_generation_pb2.StatusMessage(message=message)
+        )
+
     def _error(self, message: str):
         return card_generation_pb2.GenerateCardsStreamResponse(
             error=card_generation_pb2.ErrorMessage(message=message)
         )
-    
-    def _build_card_from_payload(self, payload):
-        ml_card = payload.get("cards", [{}])[0]
 
+    def _build_card(self, card_data: dict):
+        def _map_block(block: dict):
+            logger.info(f"type: {block.get('type', '')}")
+            return card_generation_pb2.TextBlock(
+                type=block.get("type", ""),
+                id=block.get("id", ""),
+                content=block.get("content", ""),
+            )
         return card_generation_pb2.GeneratedCard(
             content=card_generation_pb2.CardContent(
-                front=[
-                    card_generation_pb2.TextBlock(
-                        id=str(uuid.uuid4()),
-                        content=ml_card.get("question", ""),
-                    )
-                ],
-                back=[
-                    card_generation_pb2.TextBlock(
-                        id=str(uuid.uuid4()),
-                        content=ml_card.get("answer", ""),
-                    )
-                ],
+                front=[_map_block(b) for b in card_data.get("front", [])],
+                back=[_map_block(b) for b in card_data.get("back", [])],
             )
         )
 

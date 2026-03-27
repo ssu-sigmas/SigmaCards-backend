@@ -30,7 +30,9 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str
     S3_SECRET_KEY: str
     S3_BUCKET: str
+    S3_BUCKET_TEXT: str
     S3_SECURE: bool
+    S3_TEXT_TTL_DAYS: int
     IMAGE_UPLOAD_URL_TTL_SECONDS: int = 600
     IMAGE_ORPHAN_CLEANUP_INTERVAL_SECONDS: int = 86400
     IMAGE_ORPHAN_CLEANUP_AGE_HOURS: int = 24

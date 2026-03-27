@@ -14,6 +14,7 @@ COPY requirements-torch.txt .
 COPY requirements.txt .
 RUN pip install -r requirements-torch.txt
 RUN pip install --no-cache-dir -r requirements.txt
+RUN python -c "import nltk; nltk.download('punkt_tab')"
 
 # Копировать код приложения
 COPY . .

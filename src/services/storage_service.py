@@ -2,7 +2,7 @@ from botocore.client import Config
 import boto3
 
 from src.core.config import settings
-
+# TODO: refactor it all blin...
 ALLOWED_IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/webp"}
 
 
@@ -60,3 +60,44 @@ class StorageService:
     def get_public_object_url(object_name: str) -> str:
         base = settings.S3_PUBLIC_ENDPOINT.rstrip('/')
         return f"{base}/{settings.S3_BUCKET}/{object_name}"
+    
+    @staticmethod
+    def upload_chunk_object(object_name: str, text: str):
+        client = StorageService.get_s3_client()
+
+        client.put_object(
+            Bucket=settings.S3_BUCKET_TEXT,
+            Key=object_name,
+            Body=text.encode("utf-8"),
+            ContentType="text/plain",
+            CacheControl="no-store",
+        )
+
+    @staticmethod
+    def build_chunk_key(generation_id: str, chunk_id: str) -> str:
+        return f"chunks/{generation_id}/{chunk_id}.txt"
+    
+    @staticmethod
+    def get_chunk_object_url(object_name: str) -> str:
+        base = settings.S3_PUBLIC_ENDPOINT.rstrip("/")
+        return f"{base}/{settings.S3_BUCKET_TEXT}/{object_name}"
+    
+    @staticmethod
+    def ensure_chunks_lifecycle(days: int = 3):
+        client = StorageService.get_s3_client()
+
+        lifecycle_config = {
+            "Rules": [
+                {
+                    "ID": "auto-delete-chunks",
+                    "Status": "Enabled",
+                    "Filter": {"Prefix": "chunks/"},
+                    "Expiration": {"Days": days},
+                }
+            ]
+        }
+
+        client.put_bucket_lifecycle_configuration(
+            Bucket=settings.S3_BUCKET_TEXT,
+            LifecycleConfiguration=lifecycle_config,
+        )    

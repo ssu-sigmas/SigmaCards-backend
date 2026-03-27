@@ -5,6 +5,9 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 cd "$REPO_ROOT"
 
+find . -type f -name "*.pyc" -delete
+find . -type d -name "__pycache__" -exec rm -rf {} +
+
 python -m grpc_tools.protoc \
   -I ./src \
   --python_out=./src \

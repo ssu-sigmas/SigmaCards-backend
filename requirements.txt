@@ -31,3 +31,4 @@ boto3 == 1.42.72
 redis==7.3.0
 grpcio==1.78.0
 grpcio-tools==1.78.0
+nltk==3.9.3
