@@ -93,15 +93,3 @@ def delete_card(
         CardService.delete_card(db, card_id, current_user)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-
-@router.post("/generate", response_model=List[MLGeneratedCard])
-async def generate_cards_ml(
-    request: GenerateCardsRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Генерирует карточки разных типов через ML-сервис (прослойка)
-    НЕ сохраняет в БД - только возвращает для фронта
-    """
-    cards = await ml_service.generate_cards(request.text, request.count)
-    return cards
