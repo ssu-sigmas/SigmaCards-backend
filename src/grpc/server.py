@@ -10,7 +10,9 @@ import src.grpc.card_generation_pb2 as card_generation_pb2
 import src.grpc.card_generation_pb2_grpc as card_generation_pb2_grpc
 from src.grpc.auth_interceptor import AuthInterceptor, current_user_id_ctx
 from src.services.ml_service import ml_service
+from src.services.generation_service import GenerationService
 from src.db.redis_client import get_redis
+from src.db.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +42,13 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
 
         self.generation_id = str(uuid.uuid4())
         logger.info("generation_id=%s", self.generation_id)
+        yield card_generation_pb2.GenerateCardsStreamResponse(
+            generation_id=card_generation_pb2.GenerationIdMessage(generation_id=self.generation_id)
+        )
+
 
         queue = kafka_router.subscribe(self.generation_id)
+        generated_cards: list[dict] = []
 
         try:
             real_tasks = await ml_service.send_generation_requests(
@@ -59,9 +66,11 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
             received_tasks = 0
 
             while received_tasks < real_tasks:
+                # TODO: it's fucking bad
                 if stop_event.is_set():
                     logger.info("stopped by user")
                     break
+
 
                 try:
                     payload = await asyncio.wait_for(queue.get(), timeout=30)
@@ -75,6 +84,7 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
                     if stop_event.is_set():
                         break
 
+                    generated_cards.append(card_data)
                     yield card_generation_pb2.GenerateCardsStreamResponse(
                         card=self._build_card(card_data)
                     )
@@ -87,6 +97,20 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
 
         finally:
             kafka_router.unsubscribe(self.generation_id)
+            db = SessionLocal()
+            try:
+                GenerationService.save_generation_results(
+                    db=db,
+                    user_id=uuid.UUID(current_user_id),
+                    generation_id=uuid.UUID(self.generation_id),
+                    requested_count=count,
+                    cards=generated_cards,
+                    is_stopped=stop_event.is_set(),
+                )
+            except Exception:
+                logger.exception("failed to persist generation results")
+            finally:
+                db.close()
 
         yield card_generation_pb2.GenerateCardsStreamResponse(
             completed=card_generation_pb2.CompletedMessage(
@@ -116,7 +140,6 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
 
     def _build_card(self, card_data: dict):
         def _map_block(block: dict):
-            logger.info(f"type: {block.get('type', '')}")
             return card_generation_pb2.TextBlock(
                 type=block.get("type", ""),
                 id=block.get("id", ""),

@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1agrpc/card_generation.proto\x12\x13sigmacards.cards.v1\"3\n\x14GenerateCardsRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\r\n\x05\x63ount\x18\x02 \x01(\r\"\'\n\x15StopGenerationRequest\x12\x0e\n\x06reason\x18\x01 \x01(\t\"\xa2\x01\n\x1aGenerateCardsStreamRequest\x12=\n\x08generate\x18\x01 \x01(\x0b\x32).sigmacards.cards.v1.GenerateCardsRequestH\x00\x12:\n\x04stop\x18\x02 \x01(\x0b\x32*.sigmacards.cards.v1.StopGenerationRequestH\x00\x42\t\n\x07payload\"6\n\tTextBlock\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\n\n\x02id\x18\x02 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x03 \x01(\t\"j\n\x0b\x43\x61rdContent\x12-\n\x05\x66ront\x18\x01 \x03(\x0b\x32\x1e.sigmacards.cards.v1.TextBlock\x12,\n\x04\x62\x61\x63k\x18\x02 \x03(\x0b\x32\x1e.sigmacards.cards.v1.TextBlock\"B\n\rGeneratedCard\x12\x31\n\x07\x63ontent\x18\x01 \x01(\x0b\x32 .sigmacards.cards.v1.CardContent\" \n\rStatusMessage\x12\x0f\n\x07message\x18\x01 \x01(\t\"+\n\x10\x43ompletedMessage\x12\x17\n\x0fstopped_by_user\x18\x01 \x01(\x08\"\x1f\n\x0c\x45rrorMessage\x12\x0f\n\x07message\x18\x01 \x01(\t\"\x82\x02\n\x1bGenerateCardsStreamResponse\x12\x34\n\x06status\x18\x01 \x01(\x0b\x32\".sigmacards.cards.v1.StatusMessageH\x00\x12\x32\n\x04\x63\x61rd\x18\x02 \x01(\x0b\x32\".sigmacards.cards.v1.GeneratedCardH\x00\x12:\n\tcompleted\x18\x03 \x01(\x0b\x32%.sigmacards.cards.v1.CompletedMessageH\x00\x12\x32\n\x05\x65rror\x18\x04 \x01(\x0b\x32!.sigmacards.cards.v1.ErrorMessageH\x00\x42\t\n\x07payload2\x8f\x01\n\x15\x43\x61rdGenerationService\x12v\n\rGenerateCards\x12/.sigmacards.cards.v1.GenerateCardsStreamRequest\x1a\x30.sigmacards.cards.v1.GenerateCardsStreamResponse(\x01\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1agrpc/card_generation.proto\x12\x13sigmacards.cards.v1\"3\n\x14GenerateCardsRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\r\n\x05\x63ount\x18\x02 \x01(\r\"\'\n\x15StopGenerationRequest\x12\x0e\n\x06reason\x18\x01 \x01(\t\"\xa2\x01\n\x1aGenerateCardsStreamRequest\x12=\n\x08generate\x18\x01 \x01(\x0b\x32).sigmacards.cards.v1.GenerateCardsRequestH\x00\x12:\n\x04stop\x18\x02 \x01(\x0b\x32*.sigmacards.cards.v1.StopGenerationRequestH\x00\x42\t\n\x07payload\"6\n\tTextBlock\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\n\n\x02id\x18\x02 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x03 \x01(\t\"j\n\x0b\x43\x61rdContent\x12-\n\x05\x66ront\x18\x01 \x03(\x0b\x32\x1e.sigmacards.cards.v1.TextBlock\x12,\n\x04\x62\x61\x63k\x18\x02 \x03(\x0b\x32\x1e.sigmacards.cards.v1.TextBlock\"B\n\rGeneratedCard\x12\x31\n\x07\x63ontent\x18\x01 \x01(\x0b\x32 .sigmacards.cards.v1.CardContent\" \n\rStatusMessage\x12\x0f\n\x07message\x18\x01 \x01(\t\",\n\x13GenerationIdMessage\x12\x15\n\rgeneration_id\x18\x01 \x01(\t\"+\n\x10\x43ompletedMessage\x12\x17\n\x0fstopped_by_user\x18\x01 \x01(\x08\"\x1f\n\x0c\x45rrorMessage\x12\x0f\n\x07message\x18\x01 \x01(\t\"\xc5\x02\n\x1bGenerateCardsStreamResponse\x12\x34\n\x06status\x18\x01 \x01(\x0b\x32\".sigmacards.cards.v1.StatusMessageH\x00\x12\x41\n\rgeneration_id\x18\x02 \x01(\x0b\x32(.sigmacards.cards.v1.GenerationIdMessageH\x00\x12\x32\n\x04\x63\x61rd\x18\x03 \x01(\x0b\x32\".sigmacards.cards.v1.GeneratedCardH\x00\x12:\n\tcompleted\x18\x04 \x01(\x0b\x32%.sigmacards.cards.v1.CompletedMessageH\x00\x12\x32\n\x05\x65rror\x18\x05 \x01(\x0b\x32!.sigmacards.cards.v1.ErrorMessageH\x00\x42\t\n\x07payload2\x8f\x01\n\x15\x43\x61rdGenerationService\x12v\n\rGenerateCards\x12/.sigmacards.cards.v1.GenerateCardsStreamRequest\x1a\x30.sigmacards.cards.v1.GenerateCardsStreamResponse(\x01\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -45,12 +45,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GENERATEDCARD']._serialized_end=540
   _globals['_STATUSMESSAGE']._serialized_start=542
   _globals['_STATUSMESSAGE']._serialized_end=574
-  _globals['_COMPLETEDMESSAGE']._serialized_start=576
-  _globals['_COMPLETEDMESSAGE']._serialized_end=619
-  _globals['_ERRORMESSAGE']._serialized_start=621
-  _globals['_ERRORMESSAGE']._serialized_end=652
-  _globals['_GENERATECARDSSTREAMRESPONSE']._serialized_start=655
-  _globals['_GENERATECARDSSTREAMRESPONSE']._serialized_end=913
-  _globals['_CARDGENERATIONSERVICE']._serialized_start=916
-  _globals['_CARDGENERATIONSERVICE']._serialized_end=1059
+  _globals['_GENERATIONIDMESSAGE']._serialized_start=576
+  _globals['_GENERATIONIDMESSAGE']._serialized_end=620
+  _globals['_COMPLETEDMESSAGE']._serialized_start=622
+  _globals['_COMPLETEDMESSAGE']._serialized_end=665
+  _globals['_ERRORMESSAGE']._serialized_start=667
+  _globals['_ERRORMESSAGE']._serialized_end=698
+  _globals['_GENERATECARDSSTREAMRESPONSE']._serialized_start=701
+  _globals['_GENERATECARDSSTREAMRESPONSE']._serialized_end=1026
+  _globals['_CARDGENERATIONSERVICE']._serialized_start=1029
+  _globals['_CARDGENERATIONSERVICE']._serialized_end=1172
 # @@protoc_insertion_point(module_scope)

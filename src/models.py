@@ -31,6 +31,7 @@ class User(Base):
     deck_subscriptions = relationship("DeckSubscription", back_populates="user", cascade="all, delete-orphan")
     user_cards = relationship("UserCard", back_populates="user", cascade="all, delete-orphan")
     review_logs = relationship("ReviewLog", back_populates="user", cascade="all, delete-orphan")
+    card_generations = relationship("CardGeneration", back_populates="user", cascade="all, delete-orphan")
 
 
 class RefreshSession(Base):
@@ -201,3 +202,39 @@ class CardImage(Base):
 
     card = relationship("Flashcard", back_populates="card_images")
     image = relationship("Image", back_populates="cards")
+
+
+# ==========================================
+# CARD GENERATION HISTORY
+# ==========================================
+class CardGeneration(Base):
+    __tablename__ = "card_generations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_text = Column(UUID(as_uuid=True), ForeignKey("sources.id", ondelete="CASCADE"), nullable=True)
+    requested_count = Column(Integer, nullable=False)
+    generated_count = Column(Integer, nullable=False, default=0)
+    is_stopped = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    user = relationship("User", back_populates="card_generations")
+    cards = relationship("GeneratedCardResult", back_populates="generation", cascade="all, delete-orphan")
+
+
+class GeneratedCardResult(Base):
+    __tablename__ = "generated_card_results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    generation_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("card_generations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    position = Column(Integer, nullable=False)
+    content = Column(JSONB, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    generation = relationship("CardGeneration", back_populates="cards")

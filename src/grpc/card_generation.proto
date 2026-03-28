@@ -41,6 +41,10 @@ message StatusMessage {
   string message = 1;
 }
 
+message GenerationIdMessage {
+  string generation_id = 1;
+}
+
 message CompletedMessage {
   bool stopped_by_user = 1;
 }
@@ -52,8 +56,9 @@ message ErrorMessage {
 message GenerateCardsStreamResponse {
   oneof payload {
     StatusMessage status = 1;
-    GeneratedCard card = 2;
-    CompletedMessage completed = 3;
-    ErrorMessage error = 4;
+    GenerationIdMessage generation_id = 2;
+    GeneratedCard card = 3;
+    CompletedMessage completed = 4;
+    ErrorMessage error = 5;
   }
 }
