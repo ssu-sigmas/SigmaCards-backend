@@ -82,3 +82,5 @@ tests/*.json
 
 
 denis.py
+.postman/*
+postman/

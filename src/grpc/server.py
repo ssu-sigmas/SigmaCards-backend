@@ -10,6 +10,7 @@ import src.grpc.card_generation_pb2 as card_generation_pb2
 import src.grpc.card_generation_pb2_grpc as card_generation_pb2_grpc
 from src.grpc.auth_interceptor import AuthInterceptor, current_user_id_ctx
 from src.services.ml_service import ml_service
+from src.db.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 
@@ -37,14 +38,14 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
         text = first_request.generate.text
         count = max(1, first_request.generate.count)
 
-        generation_id = str(uuid.uuid4())
-        logger.info("generation_id=%s", generation_id)
+        self.generation_id = str(uuid.uuid4())
+        logger.info("generation_id=%s", self.generation_id)
 
-        queue = kafka_router.subscribe(generation_id)
+        queue = kafka_router.subscribe(self.generation_id)
 
         try:
             real_tasks = await ml_service.send_generation_requests(
-                generation_id=generation_id,
+                generation_id=self.generation_id,
                 text=text,
                 count=count,
             )
@@ -85,7 +86,7 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
             yield self._error("generation failed")
 
         finally:
-            kafka_router.unsubscribe(generation_id)
+            kafka_router.unsubscribe(self.generation_id)
 
         yield card_generation_pb2.GenerateCardsStreamResponse(
             completed=card_generation_pb2.CompletedMessage(
@@ -98,6 +99,7 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
             async for incoming in request_iterator:
                 if incoming.WhichOneof("payload") == "stop":
                     stop_event.set()
+                    get_redis().set(f"generation:skip:{self.generation_id}",1)
                     return
         except Exception:
             stop_event.set()
