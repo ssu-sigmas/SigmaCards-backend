@@ -1,12 +1,18 @@
+from io import BytesIO
+
 from botocore.client import Config
 import boto3
+from pypdf import PdfReader
 
 from src.core.config import settings
 # TODO: refactor it all blin...
 ALLOWED_IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/webp"}
+ALLOWED_PDF_MIME_TYPES = {"application/pdf"}
 
 
 class StorageService:
+    PDF_MAX_SIZE_BYTES = 50 * 1024 * 1024
+
     @staticmethod
     def get_s3_client():
         return boto3.client(
@@ -18,8 +24,8 @@ class StorageService:
         )
     
     @staticmethod
-    def generate_upload_url(object_name: str, content_type: str):
-        if content_type not in ALLOWED_IMAGE_MIME_TYPES:
+    def generate_upload_url(object_name: str, content_type: str, max_size_bytes: int = settings.IMAGE_MAX_SIZE_BYTES):
+        if content_type not in ALLOWED_IMAGE_MIME_TYPES and content_type not in ALLOWED_PDF_MIME_TYPES:
             raise ValueError("Unsupported MIME type")
         
         client = StorageService.get_s3_client()
@@ -33,7 +39,7 @@ class StorageService:
             Conditions=[
                 {"Content-Type": content_type},
                 {"Cache-Control": "public, max-age=31536000, immutable"},
-                ["content-length-range", 1, settings.IMAGE_MAX_SIZE_BYTES],
+                ["content-length-range", 1, max_size_bytes],
             ],
             ExpiresIn=settings.IMAGE_UPLOAD_URL_TTL_SECONDS,
         )
@@ -101,3 +107,20 @@ class StorageService:
             Bucket=settings.S3_BUCKET_TEXT,
             LifecycleConfiguration=lifecycle_config,
         )    
+
+    @staticmethod
+    def get_object_bytes(bucket: str, object_name: str) -> bytes:
+        client = StorageService.get_s3_client()
+        response = client.get_object(Bucket=bucket, Key=object_name)
+        return response["Body"].read()
+
+    @staticmethod
+    def get_pdf_page_count(object_name: str) -> int:
+        file_bytes = StorageService.get_object_bytes(settings.S3_BUCKET, object_name)
+        reader = PdfReader(BytesIO(file_bytes))
+        return len(reader.pages)
+
+    @staticmethod
+    def get_s3_url(bucket: str, object_name: str) -> str:
+        base = settings.S3_PUBLIC_ENDPOINT.rstrip("/")
+        return f"{base}/{bucket}/{object_name}"
