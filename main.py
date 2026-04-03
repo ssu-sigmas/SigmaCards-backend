@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import settings
-from src.api import auth, users, decks, cards, review, images, generations
+from src.api import auth, users, decks, cards, review, images, generations, pdf
 
 from src.services.ml_service import ml_service
 from src.services.kafka_router import kafka_router
@@ -95,6 +95,7 @@ app.include_router(cards.router, prefix=API_V1_PREFIX)
 app.include_router(review.router, prefix=API_V1_PREFIX)
 app.include_router(images.router, prefix=API_V1_PREFIX)
 app.include_router(generations.router, prefix=API_V1_PREFIX)
+app.include_router(pdf.router, prefix=API_V1_PREFIX)
 
 if __name__ == "__main__":
     import asyncio
