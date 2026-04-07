@@ -1,25 +1,26 @@
 import json
 import logging
-import uuid
 import random
-from itertools import cycle, islice
-from typing import List, Optional
+import uuid
+from typing import Optional
 
 from aiokafka import AIOKafkaProducer
+from nltk.tokenize import sent_tokenize
 
 from src.core.config import settings
 from src.services.storage_service import StorageService
-from nltk.tokenize import sent_tokenize
 
 logger = logging.getLogger(__name__)
-#TODO: более гибкая система раздачи
+# TODO: более гибкая система раздачи
 
 CARD_TYPES = ["key_terms", "facts", "fill_blank", "test_questions", "concepts"]
+
 
 class MLService:
     def __init__(self):
         self.bootstrap_servers = settings.KAFKA_BOOTSTRAP_SERVERS
         self.request_topic = settings.KAFKA_ML_REQUEST_TOPIC
+        self.ocr_request_topic = settings.KAFKA_OCR_REQUEST_TOPIC
 
         self.producer: Optional[AIOKafkaProducer] = None
         self._is_running = False
@@ -89,7 +90,7 @@ class MLService:
                 text=chunk_text
             )
             s3_url = StorageService.get_chunk_object_url(key)
-            s3_url = s3_url.replace('localhost', 'rustfs') # TODO: normal change
+            s3_url = s3_url.replace('localhost', '192.168.137.1')  # TODO: normal change
 
             card_type = random.choice(CARD_TYPES)
 
@@ -118,12 +119,47 @@ class MLService:
 
         return sent
 
+    async def send_ocr_requests(
+        self,
+        generation_id: str,
+        source_object_name: str,
+        total_pages: int,
+        pages_per_task: int,
+    ) -> int:
+        if not self._is_running:
+            await self.startup()
+
+        if not self.producer:
+            raise RuntimeError("Kafka producer is not initialized")
+
+        sent = 0
+        corr_ids = list()
+        for start_page in range(1, total_pages + 1, pages_per_task):
+            end_page = min(total_pages, start_page + pages_per_task - 1)
+            corr_id = str(uuid.uuid4())
+            payload = {
+                "generation_id": generation_id,
+                "correlation_id": corr_id,
+                "pdf_url": StorageService.get_s3_url(settings.S3_BUCKET, source_object_name).replace('localhost', '192.168.137.1'),
+                "pages": list(range(start_page, end_page + 1))
+            }
+            corr_ids.append(corr_id)
+
+            await self.producer.send_and_wait(
+                topic=self.ocr_request_topic,
+                key=generation_id,
+                value=payload,
+            )
+            sent += 1
+
+        return (sent, corr_ids)
+
     def _build_chunks(self, sentences: list[str], chunk_size: int, overlap: int = 1):
         chunks = []
         i = 0
 
         while i < len(sentences):
-            chunk = sentences[i : i + chunk_size]
+            chunk = sentences[i: i + chunk_size]
             if not chunk:
                 break
 
@@ -147,5 +183,6 @@ class MLService:
 
     def _split_into_sentences(self, text: str) -> list[str]:
         return sent_tokenize(text)
+
 
 ml_service = MLService()

@@ -1,18 +1,20 @@
 import asyncio
+import contextlib
 import logging
-from typing import AsyncIterator
 import uuid
-from src.services.kafka_router import kafka_router
 
 import grpc
 
 import src.grpc.card_generation_pb2 as card_generation_pb2
 import src.grpc.card_generation_pb2_grpc as card_generation_pb2_grpc
-from src.grpc.auth_interceptor import AuthInterceptor, current_user_id_ctx
-from src.services.ml_service import ml_service
-from src.services.generation_service import GenerationService
-from src.db.redis_client import get_redis
+from src.core.config import settings
 from src.db.database import SessionLocal
+from src.db.redis_client import get_redis
+from src.grpc.auth_interceptor import AuthInterceptor, current_user_id_ctx
+from src.services.generation_service import GenerationService
+from src.services.kafka_router import kafka_router
+from src.services.ml_service import ml_service
+from src.services.storage_service import StorageService
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,7 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
             await context.abort(grpc.StatusCode.UNAUTHENTICATED, "Missing authenticated context")
 
         stop_event = asyncio.Event()
+        generation_id = str(uuid.uuid4())
 
         try:
             first_request = await anext(request_iterator)
@@ -35,74 +38,94 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
             yield self._error("first message must contain generate payload")
             return
 
-        yield self._status("начинаем обработку")
-
-        text = first_request.generate.text
         count = max(1, first_request.generate.count)
+        source_kind = first_request.generate.WhichOneof("source")
 
-        self.generation_id = str(uuid.uuid4())
-        logger.info("generation_id=%s", self.generation_id)
+        if source_kind is None:
+            yield self._error("source is required: text or pdf")
+            return
+
+        get_redis().set(f"generation:skip:{generation_id}", 0)
+        get_redis().set(f"user:ocr_budget:{current_user_id}", settings.OCR_INITIAL_BUDGET)
+
+        yield self._status("начинаем обработку")
+        logger.info("generation_id=%s", generation_id)
         yield card_generation_pb2.GenerateCardsStreamResponse(
-            generation_id=card_generation_pb2.GenerationIdMessage(generation_id=self.generation_id)
+            generation_id=card_generation_pb2.GenerationIdMessage(generation_id=generation_id)
         )
 
-
-        queue = kafka_router.subscribe(self.generation_id)
+        queue = kafka_router.subscribe(generation_id)
         generated_cards: list[dict] = []
+        stop_task = asyncio.create_task(self._listen_stop(request_iterator, stop_event, generation_id))
 
         try:
-            real_tasks = await ml_service.send_generation_requests(
-                generation_id=self.generation_id,
-                text=text,
-                count=count,
-            )
+            if source_kind == "text":
+                source_text = first_request.generate.text
+            else:
+                yield self._status("извлекаем текст из pdf")
+                source_text = await self._extract_text_from_pdf(
+                    generation_id=generation_id,
+                    object_name=first_request.generate.pdf.object_name,
+                    queue=queue,
+                    stop_event=stop_event,
+                )
 
-            logger.info("sent %s tasks to kafka", real_tasks)
+            if stop_event.is_set():
+                logger.info("generation %s stopped before card generation", generation_id)
+            else:
+                yield self._status("анализируем текст")
+                real_tasks = await ml_service.send_generation_requests(
+                    generation_id=generation_id,
+                    text=source_text,
+                    count=count,
+                )
+                logger.info("sent %s tasks to kafka", real_tasks)
 
-            asyncio.create_task(self._listen_stop(request_iterator, stop_event))
-
-            yield self._status("анализируем текст")
-
-            received_tasks = 0
-
-            while received_tasks < real_tasks:
-                # TODO: it's fucking bad
-                if stop_event.is_set():
-                    logger.info("stopped by user")
-                    break
-
-
-                try:
-                    payload = await asyncio.wait_for(queue.get(), timeout=30)
-                except asyncio.TimeoutError:
-                    logger.error("timeout waiting kafka")
-                    break
-
-                cards = payload.get("cards", [])
-
-                for card_data in cards:
+                received_tasks = 0
+                while received_tasks < real_tasks:
                     if stop_event.is_set():
+                        logger.info("generation %s stopped by user", generation_id)
                         break
 
-                    generated_cards.append(card_data)
-                    yield card_generation_pb2.GenerateCardsStreamResponse(
-                        card=self._build_card(card_data)
-                    )
+                    try:
+                        payload = await asyncio.wait_for(queue.get(), timeout=30)
+                    except asyncio.TimeoutError:
+                        logger.error("timeout waiting kafka")
+                        break
 
-                received_tasks += 1
+                    cards = payload.get("cards", [])
+                    if not cards:
+                        continue
 
+                    for card_data in cards:
+                        if stop_event.is_set():
+                            break
+
+                        generated_cards.append(card_data)
+                        yield card_generation_pb2.GenerateCardsStreamResponse(
+                            card=self._build_card(card_data)
+                        )
+
+                    received_tasks += 1
+
+        except ValueError as exc:
+            logger.warning("validation error: %s", exc)
+            yield self._error(str(exc))
         except Exception:
             logger.exception("gRPC stream crashed")
             yield self._error("generation failed")
-
         finally:
-            kafka_router.unsubscribe(self.generation_id)
+            stop_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await stop_task
+
+            kafka_router.unsubscribe(generation_id)
             db = SessionLocal()
             try:
                 GenerationService.save_generation_results(
                     db=db,
                     user_id=uuid.UUID(current_user_id),
-                    generation_id=uuid.UUID(self.generation_id),
+                    generation_id=uuid.UUID(generation_id),
                     requested_count=count,
                     cards=generated_cards,
                     is_stopped=stop_event.is_set(),
@@ -118,15 +141,70 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
             )
         )
 
-    async def _listen_stop(self, request_iterator, stop_event):
+    async def _extract_text_from_pdf(
+        self,
+        generation_id: str,
+        object_name: str,
+        queue: asyncio.Queue,
+        stop_event: asyncio.Event,
+    ) -> str:
+        total_pages = StorageService.get_pdf_page_count(object_name)
+        if total_pages > settings.PDF_MAX_PAGES:
+            raise ValueError(f"PDF is too large: {total_pages} pages, limit is {settings.PDF_MAX_PAGES}")
+
+        ocr_tasks, corr_ids = await ml_service.send_ocr_requests(
+            generation_id=generation_id,
+            source_object_name=object_name,
+            total_pages=total_pages,
+            pages_per_task=settings.OCR_PAGES_PER_TASK,
+        )
+
+        text_by_correlation_id: dict[str, str] = {}
+        expected_set = set(corr_ids)
+
+        while len(text_by_correlation_id) < ocr_tasks:
+            if stop_event.is_set():
+                break
+
+            try:
+                payload = await asyncio.wait_for(queue.get(), timeout=60)
+            except asyncio.TimeoutError as exc:
+                raise RuntimeError("timeout waiting OCR results") from exc
+
+            # if "cards" in payload:
+            #     continue
+
+            correlation_id = payload.get("correlation_id")
+            if not isinstance(correlation_id, str):
+                continue
+
+            if correlation_id not in expected_set:
+                continue
+
+            text_by_correlation_id[correlation_id] = self._extract_text_from_ocr_payload(payload)
+
+        ordered = [text_by_correlation_id[cid] for cid in corr_ids if cid in text_by_correlation_id]
+        return "\n".join(ordered)
+
+    async def _listen_stop(self, request_iterator, stop_event, generation_id: str):
         try:
             async for incoming in request_iterator:
                 if incoming.WhichOneof("payload") == "stop":
                     stop_event.set()
-                    get_redis().set(f"generation:skip:{self.generation_id}",1)
+                    get_redis().set(f"generation:skip:{generation_id}", 1)
                     return
         except Exception:
             stop_event.set()
+
+    def _extract_text_from_ocr_payload(self, payload: dict) -> str:
+        if isinstance(payload.get("extracted_text"), str):
+            return payload["extracted_text"]
+
+        result = payload.get("result")
+        if isinstance(result, dict) and isinstance(result.get("text"), str):
+            return result["text"]
+
+        return ""
 
     def _status(self, message: str):
         return card_generation_pb2.GenerateCardsStreamResponse(
@@ -145,6 +223,7 @@ class CardGenerationService(card_generation_pb2_grpc.CardGenerationServiceServic
                 id=block.get("id", ""),
                 content=block.get("content", ""),
             )
+
         return card_generation_pb2.GeneratedCard(
             content=card_generation_pb2.CardContent(
                 front=[_map_block(b) for b in card_data.get("front", [])],

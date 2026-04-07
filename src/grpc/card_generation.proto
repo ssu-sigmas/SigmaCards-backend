@@ -6,8 +6,15 @@ service CardGenerationService {
   rpc GenerateCards (stream GenerateCardsStreamRequest) returns (stream GenerateCardsStreamResponse);
 }
 
+message PdfSource {
+  string object_name = 1;
+}
+
 message GenerateCardsRequest {
-  string text = 1;
+  oneof source {
+    string text = 1;
+    PdfSource pdf = 3;
+  }
   uint32 count = 2;
 }
 

@@ -25,6 +25,7 @@ class KafkaRouter:
 
         self.consumer = AIOKafkaConsumer(
             settings.KAFKA_ML_RESPONSE_TOPIC,
+            settings.KAFKA_OCR_RESPONSE_TOPIC,
             bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
             group_id=settings.KAFKA_ML_CONSUMER_GROUP,
             enable_auto_commit=True,

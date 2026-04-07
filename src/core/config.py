@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     KAFKA_ML_REQUEST_TOPIC: str = "ml.cards.generate.request"
     KAFKA_ML_RESPONSE_TOPIC: str = "ml.cards.generate.response"
     KAFKA_ML_CONSUMER_GROUP: str = "sigmacards-ml-client"
+    KAFKA_OCR_REQUEST_TOPIC: str = "ml.cards.extract.request"
+    KAFKA_OCR_RESPONSE_TOPIC: str = "ml.cards.extract.response"
+    PDF_MAX_PAGES: int = 120
+    OCR_PAGES_PER_TASK: int = 5
+    OCR_INITIAL_BUDGET: int = 100
     STORAGE_PROVIDER: str
     S3_ENDPOINT: str
     S3_PUBLIC_ENDPOINT: str
