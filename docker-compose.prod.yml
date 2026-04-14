@@ -4,7 +4,7 @@ name: sigmacards-prod
 
 services:
   traefik:
-    image: traefik:v3.1
+    image: traefik:latest
     container_name: sigmacards-traefik
     command:
       - --api.dashboard=true
