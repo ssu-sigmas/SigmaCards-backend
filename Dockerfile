@@ -19,5 +19,8 @@ RUN python -c "import nltk; nltk.download('punkt_tab')"
 # Копировать код приложения
 COPY . .
 
+# Добавить права на выполнение
+RUN chmod +x /app/scripts/start_cron.sh
+
 # Команда по умолчанию (HTTP/2 через ALPN при наличии TLS-сертификатов)
 CMD ["sh", "-c", "hypercorn main:app --bind 0.0.0.0:${APP_PORT:-8000} ${SSL_CERTFILE:+--certfile $SSL_CERTFILE} ${SSL_KEYFILE:+--keyfile $SSL_KEYFILE}"]

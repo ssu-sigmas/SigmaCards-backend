@@ -168,9 +168,9 @@ services:
       - sigmacards-network
 
   tasks-cron:
-    image: ${APP_IMAGE:-ghcr.io/ssu-sigmas/sigmacards-backend}:${APP_IMAGE_TAG:-latest}
+    image: ${APP_IMAGE:-sigmacards-backend}:${APP_IMAGE_TAG:-latest}
     container_name: sigmacards-cron
-    command: /app/scripts/start_cron.sh
+    command: /bin/sh -c "chmod +x /app/scripts/start_cron.sh && /app/scripts/start_cron.sh"
     env_file:
       - .env.prod
     environment:
