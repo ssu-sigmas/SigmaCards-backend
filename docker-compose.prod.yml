@@ -12,8 +12,11 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
+      - --entrypoints.api.address=:8443
       - --entrypoints.grpc.address=:50051
+      - --entrypoints.s3.address=:9000
+      - --entrypoints.rustfsui.address=:9001
+      - --entrypoints.kafkaui.address=:8080
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
@@ -21,8 +24,11 @@ services:
       - --log.level=${TRAEFIK_LOG_LEVEL:-INFO}
     ports:
       - "80:80"
-      - "443:443"
+      - "8443:8443"
       - "50051:50051"
+      - "9000:9000"
+      - "9001:9001"
+      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_letsencrypt:/letsencrypt
@@ -105,8 +111,8 @@ services:
         condition: service_healthy
     labels:
       - traefik.enable=true
-      - traefik.http.routers.sigmacards-kafka-ui.rule=Host(`${KAFKA_UI_DOMAIN}`)
-      - traefik.http.routers.sigmacards-kafka-ui.entrypoints=websecure
+      - traefik.http.routers.sigmacards-kafka-ui.rule=Host(`${PUBLIC_DOMAIN}`)
+      - traefik.http.routers.sigmacards-kafka-ui.entrypoints=kafkaui
       - traefik.http.routers.sigmacards-kafka-ui.tls.certresolver=letsencrypt
       - traefik.http.services.sigmacards-kafka-ui.loadbalancer.server.port=8080
     restart: unless-stopped
@@ -125,10 +131,14 @@ services:
       - rustfs_data:/data
     labels:
       - traefik.enable=true
-      - traefik.http.routers.sigmacards-rustfs-ui.rule=Host(`${RUSTFS_UI_DOMAIN}`)
-      - traefik.http.routers.sigmacards-rustfs-ui.entrypoints=websecure
+      - traefik.http.routers.sigmacards-rustfs-ui.rule=Host(`${PUBLIC_DOMAIN}`)
+      - traefik.http.routers.sigmacards-rustfs-ui.entrypoints=rustfsui
       - traefik.http.routers.sigmacards-rustfs-ui.tls.certresolver=letsencrypt
       - traefik.http.services.sigmacards-rustfs-ui.loadbalancer.server.port=9001
+      - traefik.http.routers.sigmacards-s3.rule=Host(`${PUBLIC_DOMAIN}`)
+      - traefik.http.routers.sigmacards-s3.entrypoints=s3
+      - traefik.http.routers.sigmacards-s3.tls.certresolver=letsencrypt
+      - traefik.http.services.sigmacards-s3.loadbalancer.server.port=9000
     restart: unless-stopped
     networks:
       - sigmacards-network
@@ -155,12 +165,13 @@ services:
         condition: service_started
     labels:
       - traefik.enable=true
-      - traefik.http.routers.sigmacards-api.rule=Host(`${API_DOMAIN}`)
-      - traefik.http.routers.sigmacards-api.entrypoints=websecure
+      - traefik.http.routers.sigmacards-api.rule=Host(`${PUBLIC_DOMAIN}`)
+      - traefik.http.routers.sigmacards-api.entrypoints=api
       - traefik.http.routers.sigmacards-api.tls.certresolver=letsencrypt
       - traefik.http.services.sigmacards-api.loadbalancer.server.port=${APP_PORT:-8010}
-      - traefik.tcp.routers.sigmacards-grpc.rule=HostSNI(`*`)
+      - traefik.tcp.routers.sigmacards-grpc.rule=HostSNI(`${PUBLIC_DOMAIN}`)
       - traefik.tcp.routers.sigmacards-grpc.entrypoints=grpc
+      - traefik.tcp.routers.sigmacards-grpc.tls.certresolver=letsencrypt
       - traefik.tcp.routers.sigmacards-grpc.service=sigmacards-grpc-svc
       - traefik.tcp.services.sigmacards-grpc-svc.loadbalancer.server.port=50051
     restart: unless-stopped
