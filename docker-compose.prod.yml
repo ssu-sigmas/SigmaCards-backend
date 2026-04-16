@@ -131,13 +131,17 @@ services:
       - rustfs_data:/data
     labels:
       - traefik.enable=true
+      # S3
       - traefik.http.routers.sigmacards-rustfs-s3.rule=Host(`${PUBLIC_DOMAIN}`)
       - traefik.http.routers.sigmacards-rustfs-s3.entrypoints=s3
       - traefik.http.routers.sigmacards-rustfs-s3.tls.certresolver=letsencrypt
+      - traefik.http.routers.sigmacards-rustfs-s3.service=sigmacards-rustfs-s3
       - traefik.http.services.sigmacards-rustfs-s3.loadbalancer.server.port=9000
+      # UI
       - traefik.http.routers.sigmacards-rustfs-ui.rule=Host(`${PUBLIC_DOMAIN}`)
       - traefik.http.routers.sigmacards-rustfs-ui.entrypoints=rustfsui
       - traefik.http.routers.sigmacards-rustfs-ui.tls.certresolver=letsencrypt
+      - traefik.http.routers.sigmacards-rustfs-ui.service=sigmacards-rustfs-ui
       - traefik.http.services.sigmacards-rustfs-ui.loadbalancer.server.port=9001
     restart: unless-stopped
     networks:
