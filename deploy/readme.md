@@ -79,7 +79,7 @@ curl -I https://example.com:8443/health
 Установи unit-файл:
 
 ```bash
-sudo cp systemd/sigmacards-prod.service /etc/systemd/system/sigmacards-prod.service
+sudo cp deploy/sigmacards-prod.service /etc/systemd/system/sigmacards-prod.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now sigmacards-prod.service
 ```
